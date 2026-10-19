@@ -84,6 +84,7 @@ internal static class Program
 
 public sealed class DesktopApp : Application
 {
+    public DesktopApp() { Name = "Torrent Classic"; }
     public override void Initialize()
     {
         Styles.Add(new SimpleTheme());
