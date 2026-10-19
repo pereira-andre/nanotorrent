@@ -26,8 +26,42 @@ Na primeira execução são criadas as pastas `Data/` (sessão, preferências e 
 - Criação de torrents a partir de ficheiros ou pastas, com tracker opcional.
 - Área de notificação e instância única, sem perder novos argumentos ao reabrir o executável.
 - Remoção da lista mantendo os ficheiros no disco.
+- **RSS e Atom:** subscrições, atualização periódica com ETag, filtros de inclusão/exclusão, transferência manual ou automática e histórico para evitar duplicados.
+- **Agendador semanal:** grelha de 7 × 24 horas, com modos normal, limitado, só partilha e pausa. As pausas manuais mantêm-se quando o horário muda.
+- **Fila automática:** limites de torrents/downloads ativos, ordem ajustável, início forçado e objetivos de partilha por rácio ou duração.
+- **Controlo remoto:** painel adaptado ao computador/telemóvel, chave de acesso, upload de `.torrent`, magnets, ações, prioridades, limites e consulta/transferência de itens RSS.
+- Contadores de bytes, rácio e tempo de partilha persistentes entre sessões.
 
-Esta primeira versão recria o fluxo principal e a disposição clássica, não toda a gama de funcionalidades do µTorrent. Ainda não inclui RSS, agendador, fila automática, controlo remoto, leitor multimédia ou antivírus. Não promete compatibilidade com Windows XP/7/8 nem igualdade de consumo de memória com o cliente original. O executável não está assinado digitalmente.
+O projeto recria a disposição e os fluxos principais do µTorrent Classic com uma implementação independente. O painel remoto funciona na rede local ou através de VPN; não depende do serviço na nuvem µTorrent Remote. Não inclui leitor multimédia nem antivírus. Não promete compatibilidade com Windows XP/7/8 nem igualdade de consumo de memória com o cliente original. O executável não está assinado digitalmente.
+
+## RSS
+
+Seleciona **Feeds RSS → Adicionar feed**, indica o endereço RSS/Atom e escolhe o intervalo de atualização. Os itens são mostrados nessa vista; seleciona-os e usa **Transferir selecionados**. Para automatizar, ativa a respetiva opção e define os filtros. Um feed desativado deixa de ser atualizado automaticamente.
+
+Os filtros não distinguem maiúsculas de minúsculas: `*` corresponde a qualquer sequência, `?` a um carácter e `|` separa alternativas. Por exemplo, incluir `Ubuntu*|Debian*` e excluir `*beta*|*arm*`. Incluir vazio aceita todos os títulos. A opção automática também considera os itens que já estão no feed na primeira atualização. Erros num item não bloqueiam os restantes. O histórico guarda os últimos 2000 identificadores por feed; a lista mostra até 500 itens.
+
+## Fila e agendador
+
+Em **Preferências → Fila**, configura o máximo de torrents ativos e de downloads ativos. Os torrents em espera mostram **Em fila** e iniciam quando existe uma vaga. As setas da barra alteram a ordem. Os objetivos de partilha param o torrent quando atinge o rácio **ou** o tempo configurado; 0 desativa esse objetivo. O rácio usa os bytes enviados divididos pelo maior valor entre o tamanho do torrent e os bytes recebidos, para também funcionar com ficheiros que já existiam no disco.
+
+**Início forçado** ignora a fila e os objetivos de partilha, mas respeita o agendador. Torrents forçados não ocupam vagas da fila normal. Pausar ou parar manualmente um torrent impede que a automação o reinicie.
+
+Em **Preferências → Agendador**, escolhe o modo e pinta as horas da semana com o rato. O botão direito alterna o modo; também podes usar as setas e Espaço. O modo limitado aplica o menor limite não nulo entre o limite global e o do agendador. O modo só partilha permite torrents completos; para partilhar dados existentes ainda não verificados, faz primeiro **Forçar verificação**. O horário é o do Windows, incluindo a mudança de hora. A app tem de estar aberta; o agendador não inicia o Windows nem acorda um computador suspenso.
+
+## Controlo remoto
+
+1. Em **Preferências → Controlo remoto**, ativa o painel, escolhe uma porta e copia a chave. Guarda as preferências.
+2. Usa **Opções → Abrir controlo remoto** para abrir o painel neste computador.
+3. Para outro computador/telemóvel, ativa **Permitir outros dispositivos na rede local / VPN** e abre um dos endereços mostrados nas preferências.
+4. Introduz a chave no painel. Ela fica apenas na sessão desse navegador. **Gerar nova chave** invalida a anterior depois de guardar.
+
+O controlo remoto está desativado por defeito e, ao ativar, aceita apenas ligações deste computador, até escolheres o acesso pela rede. Usa HTTP, por isso deve ser usado numa rede de confiança ou através de VPN, sem expor diretamente a porta à Internet. Pode ser necessário permitir a porta na firewall do Windows. A app não abre essa porta no router nem cria regras na firewall. Não exige administrador nem conta externa.
+
+O painel permite adicionar magnets, URLs HTTP(S) de torrents ou enviar `.torrent`, iniciar/forçar/pausar/parar/verificar/remover torrents, alterar a fila, definir prioridades por ficheiro, ajustar os limites de largura de banda e consultar/atualizar/transferir itens RSS. As novas transferências remotas usam a pasta predefinida da aplicação. A remoção mantém os ficheiros.
+
+## Atualizar uma instalação portátil
+
+Fecha a app, extrai o novo ZIP e substitui o executável e os ficheiros de documentação/licenças na pasta existente. **Mantém as pastas `Data` e `Downloads`**. A sessão anterior é lida automaticamente e as novas preferências recebem valores predefinidos. A chave remota, os feeds, os horários e a fila ficam em `Data` e acompanham a pasta portátil.
 
 ## Atalhos
 
@@ -43,7 +77,7 @@ Esta primeira versão recria o fluxo principal e a disposição clássica, não 
 | Mostrar/ocultar detalhes | F5 |
 | Mostrar/ocultar barra lateral | F7 |
 
-Botão direito num torrent para abrir a pasta, copiar o magnet, definir etiqueta, verificar ou atualizar trackers. No separador Ficheiros, seleciona ficheiros e usa o botão direito para mudar prioridades. O rácio e os contadores de bytes transferidos apresentados são da sessão atual; a conclusão e o estado de execução persistem.
+Botão direito num torrent para abrir a pasta, copiar o magnet, definir etiqueta, verificar, atualizar trackers ou forçar o início. No separador Ficheiros, seleciona ficheiros e usa o botão direito para mudar prioridades. Os contadores são guardados ao alterar a sessão e ao fechar normalmente a aplicação.
 
 ## Compilar e testar
 
@@ -67,7 +101,9 @@ Para compilar apenas o executável a partir de outro sistema:
 dotnet publish src/TorrentClassic.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=false -o artifacts/win-x64
 ```
 
-Os testes de integração criam um torrent de dados sintéticos e transferem-no exclusivamente em loopback entre dois motores: verificam metadados magnet, pausa, persistência, retoma, prioridades, SHA256, duplicados, remoção sem apagar dados e mudança da pasta portátil. A CI executa-os em Windows e macOS, compila o `.exe` e abre as janelas em Windows para gerar capturas dos dois temas.
+Os testes de integração criam torrents de dados sintéticos e transferem-nos em loopback: verificam metadados magnet, pausa, persistência, retoma, prioridades, SHA256, duplicados, remoção sem apagar dados e mudança da pasta portátil. Verificam também a promoção automática da fila após uma transferência real, horários e limites, objetivos de partilha, RSS/Atom/filtros/ETag e autenticação, upload, origem dos pedidos e rotação da chave na API remota real. A CI executa-os em Windows e macOS, compila o `.exe` e abre as janelas em Windows para gerar capturas dos dois temas, RSS, fila, agendador e preferências remotas.
+
+O servidor remoto só é iniciado quando ativado. A fila/agendador usam um temporizador assíncrono de 2 segundos e o RSS verifica feeds vencidos a cada 30 segundos, respeitando o intervalo de cada subscrição. A aplicação principal continua a usar Windows Forms; o painel remoto é HTML/CSS/JavaScript sem frameworks nem recursos externos.
 
 ## Licenças e inspiração
 

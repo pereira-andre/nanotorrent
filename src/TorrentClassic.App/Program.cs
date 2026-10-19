@@ -39,7 +39,8 @@ internal static class Program
             if (smoke) Directory.CreateDirectory(args[1]);
             var preferences = smoke ? new Preferences { EnableDht = false, EnableLocalDiscovery = false, EnablePeerExchange = false, EnablePortForwarding = false, Port = 0 } : null;
             var service = new TorrentService(root, preferences);
-            using var window = new MainForm(service);
+            var runtime = new ClientRuntime(service);
+            using var window = new MainForm(runtime);
             using var cancellation = new CancellationTokenSource();
             Task server = smoke ? Task.CompletedTask : ListenAsync(window, cancellation.Token);
             window.Shown += async (_, _) =>
@@ -114,6 +115,7 @@ internal static class Program
             if (form.Service.Entries.Count == 1) await form.Service.CheckAsync(entry);
         }
         form.SelectFirstTorrent();
+        await form.Runtime.Rss.SaveFeedAsync(new RssFeed { Name = "Distribuições de exemplo", Url = "https://example.invalid/rss", Enabled = false });
         foreach (var theme in new[] { "Claro", "Escuro" })
         {
             await form.Service.SavePreferencesAsync(form.Service.Preferences with { Theme = theme });
@@ -129,9 +131,21 @@ internal static class Program
             using var dialogBitmap = new Bitmap(dialog.Width, dialog.Height);
             dialog.DrawToBitmap(dialogBitmap, new Rectangle(0, 0, dialog.Width, dialog.Height));
             dialogBitmap.Save(Path.Combine(output, "preferencias-" + theme.ToLowerInvariant() + ".png"));
+            foreach (var (index, title) in new[] { (3, "fila"), (4, "agendador"), (5, "remoto") })
+            {
+                dialog.SelectPage(index); dialog.Refresh();
+                using var advancedBitmap = new Bitmap(dialog.Width, dialog.Height);
+                dialog.DrawToBitmap(advancedBitmap, new Rectangle(0, 0, dialog.Width, dialog.Height));
+                advancedBitmap.Save(Path.Combine(output, title + "-" + theme.ToLowerInvariant() + ".png"));
+            }
             dialog.Close();
+            form.SelectRssView(); form.Refresh();
+            using var rssBitmap = new Bitmap(form.Width, form.Height);
+            form.DrawToBitmap(rssBitmap, new Rectangle(0, 0, form.Width, form.Height));
+            rssBitmap.Save(Path.Combine(output, "rss-" + theme.ToLowerInvariant() + ".png"));
+            form.SelectTorrentView();
         }
-        File.WriteAllText(Path.Combine(output, "result.txt"), "PASS: main window, three real torrent entries, preferences and both themes rendered on Windows.");
+        File.WriteAllText(Path.Combine(output, "result.txt"), "PASS: main window, three real torrent entries, RSS, queue, weekly scheduler, remote preferences and both themes rendered on Windows.");
         form.RequestExit();
     }
 }

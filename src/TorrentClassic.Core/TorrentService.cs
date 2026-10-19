@@ -5,7 +5,7 @@ using MonoTorrent.Client;
 
 namespace TorrentClassic.Core;
 
-public sealed class TorrentService : IAsyncDisposable
+public sealed partial class TorrentService : IAsyncDisposable
 {
     readonly SemaphoreSlim gate = new(1, 1);
     readonly List<TorrentEntry> entries = [];
@@ -14,10 +14,11 @@ public sealed class TorrentService : IAsyncDisposable
     readonly CancellationTokenSource lifetime = new();
     readonly List<Task> metadataTasks = [];
     readonly string root;
+    TorrentEntry[] snapshot = [];
     bool disposed;
     public ClientEngine Engine { get; }
     public Preferences Preferences { get; private set; }
-    public IReadOnlyList<TorrentEntry> Entries => entries.ToArray();
+    public IReadOnlyList<TorrentEntry> Entries => Volatile.Read(ref snapshot);
     public string DataDirectory => root;
 
     public TorrentService(string dataDirectory, Preferences? preferences = null)
@@ -30,6 +31,7 @@ public sealed class TorrentService : IAsyncDisposable
         try { Preferences.Validate(); }
         catch (ArgumentException e) { Log("Preferências inválidas: " + e.Message); Preferences = new Preferences { DownloadDirectory = Path.Combine(Path.GetDirectoryName(root)!, "Downloads") }; }
         Engine = new ClientEngine(BuildSettings(Preferences));
+        Engine.CriticalException += (_, e) => Log("Erro do motor: " + e.Exception);
     }
 
     EngineSettings BuildSettings(Preferences p) => new EngineSettingsBuilder
@@ -61,15 +63,15 @@ public sealed class TorrentService : IAsyncDisposable
     }
     public string[] Messages => messages.ToArray();
     const string PortablePrefix = "@portable/";
-    string ExpandPath(string path) => path.StartsWith(PortablePrefix, StringComparison.Ordinal) ? Path.GetFullPath(Path.Combine(Path.GetDirectoryName(root)!, path[PortablePrefix.Length..])) : path;
-    string StorePath(string path)
+    internal string ExpandPath(string path) => path.StartsWith(PortablePrefix, StringComparison.Ordinal) ? Path.GetFullPath(Path.Combine(Path.GetDirectoryName(root)!, path[PortablePrefix.Length..])) : path;
+    internal string StorePath(string path)
     {
         if (!Path.IsPathFullyQualified(path)) return path;
         var relative = Path.GetRelativePath(Path.GetDirectoryName(root)!, path);
         return relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) && !Path.IsPathFullyQualified(relative) ? PortablePrefix + relative : path;
     }
     void SavePreferences() => JsonStore.Save(Path.Combine(root, "preferences.json"), Preferences with { DownloadDirectory = StorePath(Preferences.DownloadDirectory) });
-    void SaveSession() => JsonStore.Save(Path.Combine(root, "session.json"), entries.Select(e => e.Saved).Concat(unrestored).Select(s => s with { Source = StorePath(s.Source), SavePath = StorePath(s.SavePath) }).ToArray());
+    void SaveSession() => JsonStore.Save(Path.Combine(root, "session.json"), entries.Select(e => e.Saved with { Downloaded = e.Downloaded, Uploaded = e.Uploaded, SeededSeconds = e.SeededSeconds }).Concat(unrestored).Select(s => s with { Source = StorePath(s.Source), SavePath = StorePath(s.SavePath) }).ToArray());
 
     public async Task RestoreAsync()
     {
@@ -80,6 +82,7 @@ public sealed class TorrentService : IAsyncDisposable
             catch (Exception e) { unrestored.Add(item); Log($"Não foi possível restaurar {item.Source}: {e.Message}"); }
         }
         // Failed entries remain in the saved session so a temporarily unavailable drive can recover.
+        await ApplyPolicyAsync();
     }
 
     public async Task<TorrentEntry> AddAsync(string source, string destination, bool start, SavedTorrent? saved = null)
@@ -106,9 +109,11 @@ public sealed class TorrentService : IAsyncDisposable
             var record = saved ?? new SavedTorrent { Id = id, SavePath = destination, Source = storedSource, Running = start };
             record.Id = id;
             record.Source = storedSource;
+            if (record.QueueOrder <= 0) record.QueueOrder = entries.Select(e => e.Saved.QueueOrder).DefaultIfEmpty().Max() + 1;
             var entry = new TorrentEntry(record, manager);
             manager.TorrentStateChanged += (_, e) => Log($"{manager.Name}: {e.NewState}");
             entries.Add(entry);
+            Volatile.Write(ref snapshot, entries.ToArray());
             if (record.Priorities.Count > 0)
             {
                 if (manager.HasMetadata) await ApplyPrioritiesAsync(entry);
@@ -116,7 +121,7 @@ public sealed class TorrentService : IAsyncDisposable
             }
             if (saved is null) SaveSession();
             Log("Adicionado: " + manager.Name);
-            if (start) await manager.StartAsync();
+            if (start && saved is null) await ApplyPolicyLockedAsync(DateTimeOffset.Now);
             return entry;
         }
         finally { gate.Release(); }
@@ -140,12 +145,14 @@ public sealed class TorrentService : IAsyncDisposable
         catch (Exception e) { Log("Não foi possível restaurar prioridades: " + e.Message); }
     }
 
-    public async Task StartAsync(TorrentEntry entry) => await MutateAsync(async () => { await entry.Manager.StartAsync(); entry.Saved.Running = true; });
-    public async Task PauseAsync(TorrentEntry entry) => await MutateAsync(async () => { await entry.Manager.PauseAsync(); entry.Saved.Running = false; });
-    public async Task StopAsync(TorrentEntry entry) => await MutateAsync(async () => { await entry.Manager.StopAsync(TimeSpan.FromSeconds(5)); entry.Saved.Running = false; });
+    public async Task StartAsync(TorrentEntry entry) => await MutateAsync(async () => { entry.Saved.Running = true; entry.Saved.ForceStarted = false; if (entry.Manager.State == TorrentState.Error) await entry.Manager.StopAsync(TimeSpan.FromSeconds(5)); });
+    public async Task ForceStartAsync(TorrentEntry entry) => await MutateAsync(() => { entry.Saved.Running = true; entry.Saved.ForceStarted = true; return Task.CompletedTask; });
+    public async Task PauseAsync(TorrentEntry entry) => await MutateAsync(async () => { entry.Saved.Running = false; entry.Saved.ForceStarted = false; entry.WaitingReason = null; await entry.Manager.PauseAsync(); });
+    public async Task StopAsync(TorrentEntry entry) => await MutateAsync(async () => { entry.Saved.Running = false; entry.Saved.ForceStarted = false; entry.WaitingReason = null; await entry.Manager.StopAsync(TimeSpan.FromSeconds(5)); });
     public async Task CheckAsync(TorrentEntry entry) => await MutateAsync(async () =>
     {
         entry.Saved.Running = false;
+        entry.WaitingReason = null;
         await entry.Manager.StopAsync(TimeSpan.FromSeconds(5));
         await entry.Manager.HashCheckAsync(false);
     });
@@ -154,6 +161,7 @@ public sealed class TorrentService : IAsyncDisposable
         await entry.Manager.StopAsync(TimeSpan.FromSeconds(5));
         await Engine.RemoveAsync(entry.Manager);
         entries.Remove(entry);
+        Volatile.Write(ref snapshot, entries.ToArray());
         Log("Removido da lista (ficheiros mantidos): " + entry.Manager.Name);
     });
     public async Task SetLabelAsync(TorrentEntry entry, string label) => await MutateAsync(() => { entry.Saved.Label = label.Trim(); return Task.CompletedTask; });
@@ -164,7 +172,7 @@ public sealed class TorrentService : IAsyncDisposable
     async Task MutateAsync(Func<Task> action)
     {
         await gate.WaitAsync();
-        try { ObjectDisposedException.ThrowIf(disposed, this); await action(); SaveSession(); }
+        try { ObjectDisposedException.ThrowIf(disposed, this); await action(); await ApplyPolicyLockedAsync(DateTimeOffset.Now); SaveSession(); }
         finally { gate.Release(); }
     }
 
@@ -182,6 +190,7 @@ public sealed class TorrentService : IAsyncDisposable
                 await entry.Manager.UpdateSettingsAsync(settings.ToSettings());
             }
             SavePreferences();
+            await ApplyPolicyLockedAsync(DateTimeOffset.Now);
         }
         finally { gate.Release(); }
     }

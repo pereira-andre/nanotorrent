@@ -51,21 +51,31 @@ public sealed class PreferencesDialog : Form
     readonly CheckBox forward = Check("Mapear portas automaticamente (UPnP / NAT-PMP)");
     readonly CheckBox minimize = Check("Minimizar para a área de notificação");
     readonly CheckBox close = Check("O botão de fechar oculta a janela; Sair fecha a app");
-    public Preferences Result => original with { Theme = theme.Text, DownloadDirectory = destination.Text.Trim(), Port = (int)port.Value, DownloadLimitKiB = (int)down.Value, UploadLimitKiB = (int)up.Value, MaximumConnections = (int)connections.Value, EnableDht = dht.Checked, EnablePeerExchange = pex.Checked, EnableLocalDiscovery = lpd.Checked, EnablePortForwarding = forward.Checked, MinimizeToTray = minimize.Checked, CloseToTray = close.Checked };
+    readonly QueueEditor queue;
+    readonly ScheduleEditor scheduler;
+    readonly RemoteEditor remote;
+    public Preferences Result => original with { Theme = theme.Text, DownloadDirectory = destination.Text.Trim(), Port = (int)port.Value, DownloadLimitKiB = (int)down.Value, UploadLimitKiB = (int)up.Value, MaximumConnections = (int)connections.Value, EnableDht = dht.Checked, EnablePeerExchange = pex.Checked, EnableLocalDiscovery = lpd.Checked, EnablePortForwarding = forward.Checked, MinimizeToTray = minimize.Checked, CloseToTray = close.Checked, Queue = queue.Result, Scheduler = scheduler.Result, Remote = remote.Result };
     static CheckBox Check(string text) => new() { Text = text, AutoSize = true, Margin = new Padding(3, 7, 3, 7) };
     static NumericUpDown Number(int min, int max) => new() { Minimum = min, Maximum = max, Width = 140, ThousandsSeparator = true };
 
     public PreferencesDialog(Preferences preferences, Palette colors)
     {
         original = preferences;
+        queue = new QueueEditor(preferences.Queue);
+        scheduler = new ScheduleEditor(preferences.Scheduler);
+        remote = new RemoteEditor(preferences.Remote);
         Text = "Preferências — Torrent Classic";
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = MinimizeBox = false;
-        ClientSize = new Size(630, 480);
+        ClientSize = new Size(750, 530);
         var tabs = new ClassicTabs();
         var general = new TabPage("Geral"); var network = new TabPage("Ligações"); var bandwidth = new TabPage("Largura de banda");
         tabs.TabPages.AddRange([general, network, bandwidth]);
+        foreach (var (name, control) in new (string, Control)[] { ("Fila", queue), ("Agendador", scheduler), ("Controlo remoto", remote) })
+        {
+            var page = new TabPage(name); page.Controls.Add(control); tabs.TabPages.Add(page);
+        }
         var a = DialogLayout.Table(general, 6);
         theme.Items.AddRange(["Sistema", "Claro", "Escuro"]); theme.SelectedItem = preferences.Theme;
         DialogLayout.Field(a, 0, "Aspeto:", theme);
@@ -93,6 +103,7 @@ public sealed class PreferencesDialog : Form
         AcceptButton = ok;
         Theme.Apply(this, colors);
     }
+    public void SelectPage(int index) => Controls.OfType<ClassicTabs>().Single().SelectedIndex = index;
 }
 
 public static class DialogLayout

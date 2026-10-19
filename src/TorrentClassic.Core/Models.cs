@@ -18,6 +18,9 @@ public sealed record Preferences
     public bool EnablePortForwarding { get; set; } = true;
     public bool MinimizeToTray { get; set; } = true;
     public bool CloseToTray { get; set; }
+    public QueueSettings Queue { get; set; } = new();
+    public SchedulerSettings Scheduler { get; set; } = new();
+    public RemoteSettings Remote { get; set; } = new();
 
     public void Validate()
     {
@@ -27,6 +30,7 @@ public sealed record Preferences
             throw new ArgumentException("Os limites devem estar entre 0 e 1 000 000 KiB/s.");
         if (!Path.IsPathFullyQualified(DownloadDirectory)) throw new ArgumentException("Escolhe uma pasta de destino com caminho completo.");
         if (Theme is not ("Sistema" or "Claro" or "Escuro")) throw new ArgumentException("Tema desconhecido.");
+        Queue.Validate(); Scheduler.Validate(); Remote.Validate();
     }
 }
 
@@ -39,6 +43,11 @@ public sealed record SavedTorrent
     public bool Running { get; set; }
     public DateTime AddedUtc { get; set; } = DateTime.UtcNow;
     public Dictionary<string, Priority> Priorities { get; set; } = [];
+    public long QueueOrder { get; set; }
+    public bool ForceStarted { get; set; }
+    public long Downloaded { get; set; }
+    public long Uploaded { get; set; }
+    public double SeededSeconds { get; set; }
 }
 
 public sealed class TorrentEntry(SavedTorrent saved, TorrentManager manager)
@@ -46,6 +55,14 @@ public sealed class TorrentEntry(SavedTorrent saved, TorrentManager manager)
     public SavedTorrent Saved { get; } = saved;
     public TorrentManager Manager { get; } = manager;
     public string Id => Saved.Id;
+    public string? WaitingReason { get; internal set; }
+    internal DateTimeOffset? LastSeedSample { get; set; }
+    internal double SessionSeededSeconds { get; set; }
+    public long Downloaded => Saved.Downloaded + Manager.Monitor.DataBytesReceived;
+    public long Uploaded => Saved.Uploaded + Manager.Monitor.DataBytesSent;
+    public double SeededSeconds => Saved.SeededSeconds + SessionSeededSeconds;
+    public double ShareRatio => Uploaded / (double)Math.Max(1, Math.Max(Downloaded, Manager.Torrent?.Size ?? 0));
+    public string Status => WaitingReason ?? Display.Status(Manager);
 }
 
 public static class JsonStore

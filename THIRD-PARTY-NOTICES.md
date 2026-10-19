@@ -9,6 +9,7 @@ Torrent Classic application source: MIT, copyright © 2026 André Pereira and co
 | [ReusableTasks](https://github.com/alanmcgovern/ReusableTasks) | 4.0.0 | [MIT](licenses/ReusableTasks-LICENSE.txt) |
 | [.NET runtime](https://github.com/dotnet/runtime) | recorded in the release build | MIT and bundled third-party notices; copied into the portable package by `scripts/publish.ps1` |
 | [Windows Desktop runtime](https://github.com/dotnet/winforms) | recorded in the release build | Microsoft license text copied into the portable package by `scripts/publish.ps1` |
+| [ASP.NET Core / Kestrel](https://github.com/dotnet/aspnetcore) | recorded in the release build | Microsoft license and bundled notices copied from the runtime package by `scripts/publish.ps1` |
 
 The dependency license files are copied verbatim from the NuGet packages; retain them when redistributing source or binary packages. The package script also retains the .NET runtime third-party notices. Original third-party copyright notices remain authoritative.
 

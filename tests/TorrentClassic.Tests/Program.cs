@@ -10,6 +10,8 @@ Directory.CreateDirectory(root);
 var passed = 0;
 try
 {
+    if (args.FirstOrDefault() == "--remote-preview") { await AdvancedTests.Preview(root); return 0; }
+    if (args.FirstOrDefault() == "--advanced") { passed = await AdvancedTests.Run(root, args.ElementAtOrDefault(1)); Console.WriteLine($"PASS: {passed} advanced scenarios."); return 0; }
     await Test("Invalid preferences and malformed state are handled", async () =>
     {
         var preferences = new Preferences { Port = -1 };
@@ -58,6 +60,7 @@ try
             var entry = client.Entries.Single();
             Assert(entry.Id == id && !entry.Saved.Running && entry.Manager.State == TorrentState.Stopped, "Paused torrent auto-started after restart");
             Assert(entry.Saved.Label == "Teste", "Label was not restored");
+            Assert(entry.Downloaded > 0, "Lifetime transfer counters were not restored");
             await client.SavePreferencesAsync(client.Preferences with { DownloadLimitKiB = 0 });
             await client.StartAsync(entry);
             await entry.Manager.AddPeerAsync(peer);
@@ -108,6 +111,7 @@ try
         }
         Assert(JsonStore.Load<SavedTorrent[]>(Path.Combine(folder, "session.json"), () => []).Single().Id == "missing", "Unavailable torrent was lost from saved session");
     });
+    passed += await AdvancedTests.Run(root);
     Console.WriteLine($"PASS: {passed} integration scenarios.");
     return 0;
 }
