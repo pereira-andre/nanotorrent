@@ -28,10 +28,11 @@ public sealed partial class TorrentService : IAsyncDisposable
         Directory.CreateDirectory(Path.Combine(root, "torrents"));
         Preferences = preferences ?? JsonStore.Load(Path.Combine(root, "preferences.json"), () => new Preferences { DownloadDirectory = Path.Combine(Path.GetDirectoryName(root)!, "Downloads") }, Log);
         Preferences.DownloadDirectory = ExpandPath(Preferences.DownloadDirectory);
+        Preferences.Theme = Preferences.Theme switch { "Sistema" => "System", "Claro" => "Light", "Escuro" => "Dark", _ => Preferences.Theme };
         try { Preferences.Validate(); }
-        catch (ArgumentException e) { Log("Preferências inválidas: " + e.Message); Preferences = new Preferences { DownloadDirectory = Path.Combine(Path.GetDirectoryName(root)!, "Downloads") }; }
+        catch (ArgumentException e) { Log("Invalid preferences: " + e.Message); Preferences = new Preferences { DownloadDirectory = Path.Combine(Path.GetDirectoryName(root)!, "Downloads") }; }
         Engine = new ClientEngine(BuildSettings(Preferences));
-        Engine.CriticalException += (_, e) => Log("Erro do motor: " + e.Exception);
+        Engine.CriticalException += (_, e) => Log("Engine error: " + e.Exception);
     }
 
     EngineSettings BuildSettings(Preferences p) => new EngineSettingsBuilder
@@ -63,12 +64,12 @@ public sealed partial class TorrentService : IAsyncDisposable
     }
     public string[] Messages => messages.ToArray();
     const string PortablePrefix = "@portable/";
-    internal string ExpandPath(string path) => path.StartsWith(PortablePrefix, StringComparison.Ordinal) ? Path.GetFullPath(Path.Combine(Path.GetDirectoryName(root)!, path[PortablePrefix.Length..])) : path;
+    internal string ExpandPath(string path) => path.StartsWith(PortablePrefix, StringComparison.Ordinal) ? Path.GetFullPath(Path.Combine(Path.GetDirectoryName(root)!, path[PortablePrefix.Length..].Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar))) : path;
     internal string StorePath(string path)
     {
         if (!Path.IsPathFullyQualified(path)) return path;
         var relative = Path.GetRelativePath(Path.GetDirectoryName(root)!, path);
-        return relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) && !Path.IsPathFullyQualified(relative) ? PortablePrefix + relative : path;
+        return relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) && !Path.IsPathFullyQualified(relative) ? PortablePrefix + relative.Replace(Path.DirectorySeparatorChar, '/') : path;
     }
     void SavePreferences() => JsonStore.Save(Path.Combine(root, "preferences.json"), Preferences with { DownloadDirectory = StorePath(Preferences.DownloadDirectory) });
     void SaveSession() => JsonStore.Save(Path.Combine(root, "session.json"), entries.Select(e => e.Saved with { Downloaded = e.Downloaded, Uploaded = e.Uploaded, SeededSeconds = e.SeededSeconds }).Concat(unrestored).Select(s => s with { Source = StorePath(s.Source), SavePath = StorePath(s.SavePath) }).ToArray());
@@ -79,7 +80,7 @@ public sealed partial class TorrentService : IAsyncDisposable
         foreach (var item in saved)
         {
             try { item.Source = ExpandPath(item.Source); item.SavePath = ExpandPath(item.SavePath); await AddAsync(item.Source, item.SavePath, item.Running, item); }
-            catch (Exception e) { unrestored.Add(item); Log($"Não foi possível restaurar {item.Source}: {e.Message}"); }
+            catch (Exception e) { unrestored.Add(item); Log($"Could not restore {item.Source}: {e.Message}"); }
         }
         // Failed entries remain in the saved session so a temporarily unavailable drive can recover.
         await ApplyPolicyAsync();
@@ -97,7 +98,7 @@ public sealed partial class TorrentService : IAsyncDisposable
             var magnet = MagnetLink.TryParse(source, out var parsed) ? parsed : null;
             Torrent? torrent = magnet is null ? await Torrent.LoadAsync(source) : null;
             var hashes = magnet?.InfoHashes ?? torrent!.InfoHashes;
-            if (Engine.Contains(hashes)) throw new InvalidOperationException("Este torrent já está na lista.");
+            if (Engine.Contains(hashes)) throw new InvalidOperationException("This torrent is already in the list.");
             var id = hashes.V1OrV2.ToHex();
             var storedSource = source;
             if (torrent is not null)
@@ -120,7 +121,7 @@ public sealed partial class TorrentService : IAsyncDisposable
                 else metadataTasks.Add(RestorePrioritiesAsync(entry));
             }
             if (saved is null) SaveSession();
-            Log("Adicionado: " + manager.Name);
+            Log("Added: " + manager.Name);
             if (start && saved is null) await ApplyPolicyLockedAsync(DateTimeOffset.Now);
             return entry;
         }
@@ -142,7 +143,7 @@ public sealed partial class TorrentService : IAsyncDisposable
             finally { gate.Release(); }
         }
         catch (OperationCanceledException) { }
-        catch (Exception e) { Log("Não foi possível restaurar prioridades: " + e.Message); }
+        catch (Exception e) { Log("Could not restore file priorities: " + e.Message); }
     }
 
     public async Task StartAsync(TorrentEntry entry) => await MutateAsync(async () => { entry.Saved.Running = true; entry.Saved.ForceStarted = false; if (entry.Manager.State == TorrentState.Error) await entry.Manager.StopAsync(TimeSpan.FromSeconds(5)); });
@@ -161,8 +162,10 @@ public sealed partial class TorrentService : IAsyncDisposable
         await entry.Manager.StopAsync(TimeSpan.FromSeconds(5));
         await Engine.RemoveAsync(entry.Manager);
         entries.Remove(entry);
+        long order = 1;
+        foreach (var remaining in entries.OrderBy(e => e.Saved.QueueOrder)) remaining.Saved.QueueOrder = order++;
         Volatile.Write(ref snapshot, entries.ToArray());
-        Log("Removido da lista (ficheiros mantidos): " + entry.Manager.Name);
+        Log("Removed from the list (files kept): " + entry.Manager.Name);
     });
     public async Task SetLabelAsync(TorrentEntry entry, string label) => await MutateAsync(() => { entry.Saved.Label = label.Trim(); return Task.CompletedTask; });
     public async Task SetPriorityAsync(TorrentEntry entry, IEnumerable<ITorrentManagerFile> files, Priority priority) => await MutateAsync(async () =>

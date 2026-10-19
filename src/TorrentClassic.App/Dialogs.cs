@@ -7,14 +7,14 @@ public sealed class AddDialog : Form
 {
     readonly TextBox source = new() { Dock = DockStyle.Fill };
     readonly TextBox destination = new() { Dock = DockStyle.Fill };
-    readonly CheckBox start = new() { Text = "Iniciar a transferência", Checked = true, AutoSize = true };
+    readonly CheckBox start = new() { Text = "Start downloading", Checked = true, AutoSize = true };
     public string Source => source.Text.Trim();
     public string Destination => destination.Text.Trim();
     public bool StartDownload => start.Checked;
 
     public AddDialog(string initial, Preferences preferences, Palette colors)
     {
-        Text = "Adicionar torrent";
+        Text = "Add torrent";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterParent;
         MaximizeBox = MinimizeBox = false;
@@ -22,13 +22,13 @@ public sealed class AddDialog : Form
         var table = DialogLayout.Table(this, 4);
         source.Text = initial;
         destination.Text = preferences.DownloadDirectory;
-        DialogLayout.Field(table, 0, "Ficheiro ou magnet:", source, () => { using var file = new OpenFileDialog { Filter = "Ficheiros torrent|*.torrent" }; if (file.ShowDialog(this) == DialogResult.OK) source.Text = file.FileName; });
-        DialogLayout.Field(table, 1, "Guardar em:", destination, () => { using var folder = new FolderBrowserDialog { InitialDirectory = destination.Text }; if (folder.ShowDialog(this) == DialogResult.OK) destination.Text = folder.SelectedPath; });
+        DialogLayout.Field(table, 0, "File or magnet:", source, () => { using var file = new OpenFileDialog { Filter = "Torrent files|*.torrent" }; if (file.ShowDialog(this) == DialogResult.OK) source.Text = file.FileName; });
+        DialogLayout.Field(table, 1, "Save in:", destination, () => { using var folder = new FolderBrowserDialog { InitialDirectory = destination.Text }; if (folder.ShowDialog(this) == DialogResult.OK) destination.Text = folder.SelectedPath; });
         table.Controls.Add(start, 1, 2);
-        var buttons = DialogLayout.Buttons(table, 3, "Adicionar", () =>
+        var buttons = DialogLayout.Buttons(table, 3, "Add", () =>
         {
-            if (!MagnetLink.TryParse(Source, out _) && (!File.Exists(Source) || !Source.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))) { MessageBox.Show(this, "Escolhe um ficheiro .torrent válido ou cola um magnet link."); return; }
-            if (!Path.IsPathFullyQualified(Destination)) { MessageBox.Show(this, "Escolhe uma pasta de destino com caminho completo."); return; }
+            if (!MagnetLink.TryParse(Source, out _) && (!File.Exists(Source) || !Source.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))) { MessageBox.Show(this, "Select a valid .torrent file or paste a magnet link."); return; }
+            if (!Path.IsPathFullyQualified(Destination)) { MessageBox.Show(this, "Choose a download folder with an absolute path."); return; }
             DialogResult = DialogResult.OK;
         });
         AcceptButton = buttons;
@@ -45,12 +45,12 @@ public sealed class PreferencesDialog : Form
     readonly NumericUpDown down = Number(0, 1000000);
     readonly NumericUpDown up = Number(0, 1000000);
     readonly NumericUpDown connections = Number(5, 5000);
-    readonly CheckBox dht = Check("Ativar a rede DHT");
-    readonly CheckBox pex = Check("Ativar troca de peers (PEX)");
-    readonly CheckBox lpd = Check("Descobrir peers na rede local");
-    readonly CheckBox forward = Check("Mapear portas automaticamente (UPnP / NAT-PMP)");
-    readonly CheckBox minimize = Check("Minimizar para a área de notificação");
-    readonly CheckBox close = Check("O botão de fechar oculta a janela; Sair fecha a app");
+    readonly CheckBox dht = Check("Enable DHT");
+    readonly CheckBox pex = Check("Enable peer exchange (PEX)");
+    readonly CheckBox lpd = Check("Discover local peers");
+    readonly CheckBox forward = Check("Automatically map ports (UPnP / NAT-PMP)");
+    readonly CheckBox minimize = Check("Minimize to the system tray");
+    readonly CheckBox close = Check("The close button hides the window; Exit closes the app");
     readonly QueueEditor queue;
     readonly ScheduleEditor scheduler;
     readonly RemoteEditor remote;
@@ -64,30 +64,30 @@ public sealed class PreferencesDialog : Form
         queue = new QueueEditor(preferences.Queue);
         scheduler = new ScheduleEditor(preferences.Scheduler);
         remote = new RemoteEditor(preferences.Remote);
-        Text = "Preferências — Torrent Classic";
+        Text = "Preferences — Torrent Classic";
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = MinimizeBox = false;
         ClientSize = new Size(750, 530);
         var tabs = new ClassicTabs();
-        var general = new TabPage("Geral"); var network = new TabPage("Ligações"); var bandwidth = new TabPage("Largura de banda");
+        var general = new TabPage("General"); var network = new TabPage("Connections"); var bandwidth = new TabPage("Bandwidth");
         tabs.TabPages.AddRange([general, network, bandwidth]);
-        foreach (var (name, control) in new (string, Control)[] { ("Fila", queue), ("Agendador", scheduler), ("Controlo remoto", remote) })
+        foreach (var (name, control) in new (string, Control)[] { ("Queue", queue), ("Scheduler", scheduler), ("Remote control", remote) })
         {
             var page = new TabPage(name); page.Controls.Add(control); tabs.TabPages.Add(page);
         }
         var a = DialogLayout.Table(general, 6);
-        theme.Items.AddRange(["Sistema", "Claro", "Escuro"]); theme.SelectedItem = preferences.Theme;
-        DialogLayout.Field(a, 0, "Aspeto:", theme);
+        theme.Items.AddRange(["System", "Light", "Dark"]); theme.SelectedItem = preferences.Theme;
+        DialogLayout.Field(a, 0, "Appearance:", theme);
         destination.Text = preferences.DownloadDirectory;
-        DialogLayout.Field(a, 1, "Pasta de downloads:", destination, () => { using var folder = new FolderBrowserDialog { InitialDirectory = destination.Text }; if (folder.ShowDialog(this) == DialogResult.OK) destination.Text = folder.SelectedPath; });
+        DialogLayout.Field(a, 1, "Download folder:", destination, () => { using var folder = new FolderBrowserDialog { InitialDirectory = destination.Text }; if (folder.ShowDialog(this) == DialogResult.OK) destination.Text = folder.SelectedPath; });
         minimize.Checked = preferences.MinimizeToTray; close.Checked = preferences.CloseToTray;
         a.Controls.Add(minimize, 0, 2); a.SetColumnSpan(minimize, 3);
         a.Controls.Add(close, 0, 3); a.SetColumnSpan(close, 3);
         var b = DialogLayout.Table(network, 7);
         port.Value = preferences.Port; connections.Value = preferences.MaximumConnections;
-        DialogLayout.Field(b, 0, "Porta (0 = automática):", port);
-        DialogLayout.Field(b, 1, "Máximo de ligações:", connections);
+        DialogLayout.Field(b, 0, "Port (0 = automatic):", port);
+        DialogLayout.Field(b, 1, "Maximum connections:", connections);
         dht.Checked = preferences.EnableDht; pex.Checked = preferences.EnablePeerExchange; lpd.Checked = preferences.EnableLocalDiscovery; forward.Checked = preferences.EnablePortForwarding;
         var checks = new[] { dht, pex, lpd, forward };
         for (int i = 0; i < checks.Length; i++) { b.Controls.Add(checks[i], 0, i + 2); b.SetColumnSpan(checks[i], 3); }
@@ -95,10 +95,10 @@ public sealed class PreferencesDialog : Form
         down.Value = preferences.DownloadLimitKiB; up.Value = preferences.UploadLimitKiB;
         DialogLayout.Field(c, 0, "Download (KiB/s):", down);
         DialogLayout.Field(c, 1, "Upload (KiB/s):", up);
-        var note = new Label { Text = "0 = sem limite. Os limites são globais e aplicam-se imediatamente.", AutoSize = true, Padding = new Padding(0, 15, 0, 0) };
+        var note = new Label { Text = "0 = unlimited. Global limits apply immediately.", AutoSize = true, Padding = new Padding(0, 15, 0, 0) };
         c.Controls.Add(note, 0, 2); c.SetColumnSpan(note, 3);
         var bottom = new TableLayoutPanel { Dock = DockStyle.Bottom, Height = 58, ColumnCount = 3, Padding = new Padding(10) };
-        var ok = DialogLayout.Buttons(bottom, 0, "Guardar", () => { try { Result.Validate(); DialogResult = DialogResult.OK; } catch (Exception e) { MessageBox.Show(this, e.Message); } });
+        var ok = DialogLayout.Buttons(bottom, 0, "Save", () => { try { Result.Validate(); DialogResult = DialogResult.OK; } catch (Exception e) { MessageBox.Show(this, e.Message); } });
         Controls.Add(tabs); Controls.Add(bottom);
         AcceptButton = ok;
         Theme.Apply(this, colors);
@@ -125,7 +125,7 @@ public static class DialogLayout
     public static Button Buttons(TableLayoutPanel table, int row, string label, Action accept)
     {
         var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft };
-        var cancel = new Button { Text = "Cancelar", DialogResult = DialogResult.Cancel, AutoSize = true };
+        var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, AutoSize = true };
         var ok = new Button { Text = label, AutoSize = true };
         ok.Click += (_, _) => accept();
         flow.Controls.Add(cancel); flow.Controls.Add(ok);

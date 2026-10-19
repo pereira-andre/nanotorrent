@@ -21,10 +21,18 @@
         "resolved": "4.0.0",
         "contentHash": "6EKzscjq+Q+uxD0N5GWUBO2N34cuDiJ08ZxRs1lqS0Hwvnjp6AgimUIX/8dqIxRZbPOG4gcikTMo+PM4D9CfaQ=="
       },
+      "monotorrent.client": {
+        "type": "Project",
+        "dependencies": {
+          "Mono.Nat": "[3.0.0, )",
+          "MonoTorrent": "[3.0.2, )",
+          "ReusableTasks": "[4.0.0, )"
+        }
+      },
       "torrentclassic.core": {
         "type": "Project",
         "dependencies": {
-          "MonoTorrent": "[3.0.2, )"
+          "MonoTorrent.Client": "[3.0.2, )"
         }
       }
     }

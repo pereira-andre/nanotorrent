@@ -17,11 +17,11 @@ public sealed class ClientRuntime : IAsyncDisposable
     {
         if (started) return; started = true;
         try { await Remote.ConfigureAsync(Service.Preferences.Remote); }
-        catch (Exception e) { Service.Log("Controlo remoto: " + e.Message); }
+        catch (Exception e) { Service.Log("Remote control: " + e.Message); }
         policyLoop = Task.Run(async () =>
         {
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
-            try { while (await timer.WaitForNextTickAsync(lifetime.Token)) { try { await Service.ApplyPolicyAsync(); } catch (Exception e) { Service.Log("Fila/agendador: " + e.Message); } } }
+            try { while (await timer.WaitForNextTickAsync(lifetime.Token)) { try { await Service.ApplyPolicyAsync(); } catch (Exception e) { Service.Log("Queue/scheduler: " + e.Message); } } }
             catch (OperationCanceledException) { }
         });
         rssLoop = Task.Run(async () =>

@@ -1,114 +1,126 @@
 # Torrent Classic
 
-Cliente BitTorrent **portátil, gratuito e open source para Windows**, inspirado na organização do µTorrent Classic atual. Interface nativa, sem anúncios, subscrições, telemetria ou navegador embutido. Temas claro, escuro e do sistema.
+A **free, portable, open-source BitTorrent client for Windows, macOS and Linux**, inspired by the layout of µTorrent Classic. No ads, subscriptions, accounts, telemetry or embedded browser. The desktop app, remote panel and documentation are in English, with light, dark and system themes.
 
-Implementação independente em C# / Windows Forms com o motor [MonoTorrent](https://github.com/alanmcgovern/monotorrent). Não utiliza código, executáveis, ícones ou logótipos do µTorrent e não tem afiliação com µTorrent, BitTorrent ou Rainberry.
+An independent C# implementation using [MonoTorrent](https://github.com/alanmcgovern/monotorrent), Windows Forms on Windows and [Avalonia](https://github.com/AvaloniaUI/Avalonia) on macOS/Linux. No µTorrent source code, executables, icons or logos are included. This project has no affiliation with µTorrent, BitTorrent or Rainberry.
 
-## Descarregar e abrir
+## Download and run
 
-1. Descarrega o ZIP portátil na página de [Releases](https://github.com/pereira-andre/torrent-classic/releases).
-2. Extrai **a pasta completa** para uma localização onde possas escrever, incluindo uma pen USB.
-3. Abre `TorrentClassic.exe`. Não exige instalador, administrador nem instalação separada do .NET.
+Download the appropriate archive from [Releases](https://github.com/pereira-andre/torrent-classic/releases/latest) and **extract the complete folder to a writable location**. The .NET runtime is included; no .NET installation or app installer is needed.
 
-Windows 10/11 de 64 bits (x64). A distribuição inclui o runtime .NET; por isso o executável é maior do que o µTorrent original. O executável não usa compressão interna, para evitar descompressão de código em cada arranque. O ZIP reduz o tamanho do download.
+| System | Package | Run |
+| --- | --- | --- |
+| Windows 10/11, x64 | `TorrentClassic-win-x64-portable.zip` | `TorrentClassic.exe` |
+| macOS 14+, Apple Silicon | `TorrentClassic-osx-arm64-portable.zip` | `Torrent Classic.app` |
+| macOS 14+, Intel | `TorrentClassic-osx-x64-portable.zip` | `Torrent Classic.app` |
+| Linux, x64 | `TorrentClassic-linux-x64-portable.tar.gz` | `./TorrentClassic.sh` |
+| Linux, ARM64 | `TorrentClassic-linux-arm64-portable.tar.gz` | `./TorrentClassic.sh` |
 
-Na primeira execução são criadas as pastas `Data/` (sessão, preferências e cache) e `Downloads/` junto ao executável. Fecha a aplicação antes de mover a pasta; os destinos dentro desta pasta são ajustados automaticamente na próxima execução. Destinos externos permanecem absolutos. Não são criadas associações de ficheiros nem entradas de arranque no registo. O runtime pode extrair bibliotecas nativas para a pasta temporária normal do Windows.
+On macOS, move the extracted **TorrentClassic folder** to a writable location such as your home folder before opening the app. Keep the `.app` inside it: portable data lives beside the bundle. Mac packages have an ad-hoc signature, **not an Apple Developer ID signature or notarization**. macOS may require approval in System Settings → Privacy & Security. Windows builds are unsigned and may also show an operating-system warning.
 
-## O que está implementado
+Linux packages target glibc systems with an X11 desktop or XWayland, such as Ubuntu 24.04+. Standard system libraries are required: X11, ICE/SM, fontconfig, ICU, OpenSSL and libstdc++. Minimal distributions may need these installed through their package manager. Alpine/musl and headless servers are not targeted. macOS and Linux use a matching classic layout; operating-system controls differ from the Windows Forms version.
 
-- Ficheiros `.torrent` e magnet links, incluindo metadados por peers.
-- Transferência e partilha reais, DHT, PEX, descoberta local, trackers HTTP/HTTPS/UDP e mapeamento UPnP/NAT-PMP através do MonoTorrent.
-- Iniciar, pausar, parar, verificar integridade e retomar a sessão após fechar.
-- Seleção múltipla, arrastar ficheiros/magnets, pesquisa, ordenação, categorias e etiquetas.
-- Separadores Geral, Trackers, Peers, Ficheiros, Velocidade e Registo com dados reais.
-- Prioridades por ficheiro: alta, normal, baixa e não transferir.
-- Limites globais de download/upload, porta e máximo de ligações configuráveis.
-- Criação de torrents a partir de ficheiros ou pastas, com tracker opcional.
-- Área de notificação e instância única, sem perder novos argumentos ao reabrir o executável.
-- Remoção da lista mantendo os ficheiros no disco.
-- **RSS e Atom:** subscrições, atualização periódica com ETag, filtros de inclusão/exclusão, transferência manual ou automática e histórico para evitar duplicados.
-- **Agendador semanal:** grelha de 7 × 24 horas, com modos normal, limitado, só partilha e pausa. As pausas manuais mantêm-se quando o horário muda.
-- **Fila automática:** limites de torrents/downloads ativos, ordem ajustável, início forçado e objetivos de partilha por rácio ou duração.
-- **Controlo remoto:** painel adaptado ao computador/telemóvel, chave de acesso, upload de `.torrent`, magnets, ações, prioridades, limites e consulta/transferência de itens RSS.
-- Contadores de bytes, rácio e tempo de partilha persistentes entre sessões.
+The included runtime makes these packages larger than the original µTorrent. Builds are self-contained and untrimmed for compatibility; they are not designed to match its binary size or memory footprint.
 
-O projeto recria a disposição e os fluxos principais do µTorrent Classic com uma implementação independente. O painel remoto funciona na rede local ou através de VPN; não depende do serviço na nuvem µTorrent Remote. Não inclui leitor multimédia nem antivírus. Não promete compatibilidade com Windows XP/7/8 nem igualdade de consumo de memória com o cliente original. O executável não está assinado digitalmente.
+## Portable data and updates
+
+The first run creates `Data/` (session, settings, RSS, metadata and cache) and `Downloads/` beside the executable on Windows/Linux, or beside the `.app` on macOS. No file associations, startup entries or administrator access are required. Windows may extract native runtime libraries into its normal temporary directory.
+
+**Close the app before moving or updating its folder.** Paths inside the portable folder are stored relative to it and adjusted when the folder moves. External download folders remain absolute. Choose paths appropriate to the destination OS when moving a session across operating systems.
+
+To update, replace the app binaries, docs and licenses with the new package, preserving **`Data` and `Downloads`**. On macOS replace the entire `.app`, preserving the adjacent data folders. The old Windows session and theme settings are migrated automatically. Keep a backup of important data before updating.
+
+## Features
+
+- Real downloading and seeding from `.torrent` files and magnet links, including peer metadata exchange.
+- DHT, PEX, local peer discovery, HTTP/HTTPS/UDP trackers and optional UPnP/NAT-PMP through MonoTorrent.
+- Start, pause, stop, force re-check and resume after closing; removal keeps downloaded files.
+- Search, sortable columns, categories, labels, queue order and single-instance argument forwarding.
+- General, Trackers, Peers, Files, Speed and Log tabs with live information.
+- File priorities: high, normal, low and do not download.
+- Global upload/download limits, listen port and connection limits.
+- Create torrents from files or folders with an optional tracker.
+- **RSS and Atom:** subscriptions, periodic refresh, ETag/Last-Modified, include/exclude filters, manual or automatic downloads and duplicate history.
+- **Weekly scheduler:** 168 hourly slots; normal, limited, seed only or pause; manual pauses are preserved.
+- **Automatic queue:** limits for active torrents and downloads, adjustable order, force start and ratio/time seeding goals.
+- **Remote control:** responsive browser panel with an access key, torrent uploads, magnets, actions, queue order, file priorities, bandwidth limits and RSS items.
+- Persistent byte counters, share ratio and seeding time.
+
+Windows also includes a notification-area icon, close/minimize-to-tray options, drag-and-drop and multiple torrent selection. On macOS/Linux, closing the window saves the session and exits. The app must remain running for automation or remote access.
+
+This implements the main classic workflows with independent code. It does not include µTorrent's cloud Remote service, media player or antivirus.
 
 ## RSS
 
-Seleciona **Feeds RSS → Adicionar feed**, indica o endereço RSS/Atom e escolhe o intervalo de atualização. Os itens são mostrados nessa vista; seleciona-os e usa **Transferir selecionados**. Para automatizar, ativa a respetiva opção e define os filtros. Um feed desativado deixa de ser atualizado automaticamente.
+Choose **RSS feeds**, add a subscription, enter its RSS/Atom URL and refresh interval. Select an item and choose **Download selected**. Enable automatic downloads and filters to automate this. Disabled subscriptions stop refreshing automatically.
 
-Os filtros não distinguem maiúsculas de minúsculas: `*` corresponde a qualquer sequência, `?` a um carácter e `|` separa alternativas. Por exemplo, incluir `Ubuntu*|Debian*` e excluir `*beta*|*arm*`. Incluir vazio aceita todos os títulos. A opção automática também considera os itens que já estão no feed na primeira atualização. Erros num item não bloqueiam os restantes. O histórico guarda os últimos 2000 identificadores por feed; a lista mostra até 500 itens.
+Filters ignore case: `*` matches any sequence, `?` one character, and `|` separates alternatives. For example, include `Ubuntu*|Debian*` and exclude `*beta*|*arm*`. An empty include filter accepts all titles. Automatic downloads also consider items already present on the first refresh. One failed item does not block the others. Each subscription keeps up to 2000 downloaded IDs and shows up to 500 current items.
 
-## Fila e agendador
+## Queue and scheduler
 
-Em **Preferências → Fila**, configura o máximo de torrents ativos e de downloads ativos. Os torrents em espera mostram **Em fila** e iniciam quando existe uma vaga. As setas da barra alteram a ordem. Os objetivos de partilha param o torrent quando atinge o rácio **ou** o tempo configurado; 0 desativa esse objetivo. O rácio usa os bytes enviados divididos pelo maior valor entre o tamanho do torrent e os bytes recebidos, para também funcionar com ficheiros que já existiam no disco.
+Under **Preferences → Queue**, set the maximum number of active torrents and active downloads. Waiting torrents show **Queued** and start when a slot opens. Use the toolbar arrows to reorder. A seeding goal stops a torrent when it reaches the ratio **or** time limit; 0 disables that goal. Ratio is bytes uploaded divided by the larger of torrent size and bytes received, so existing files can also be seeded toward a useful ratio.
 
-**Início forçado** ignora a fila e os objetivos de partilha, mas respeita o agendador. Torrents forçados não ocupam vagas da fila normal. Pausar ou parar manualmente um torrent impede que a automação o reinicie.
+**Force start** bypasses queue limits and seeding goals but respects the scheduler. Forced torrents do not consume normal queue slots. Manually paused or stopped torrents are not restarted by automation.
 
-Em **Preferências → Agendador**, escolhe o modo e pinta as horas da semana com o rato. O botão direito alterna o modo; também podes usar as setas e Espaço. O modo limitado aplica o menor limite não nulo entre o limite global e o do agendador. O modo só partilha permite torrents completos; para partilhar dados existentes ainda não verificados, faz primeiro **Forçar verificação**. O horário é o do Windows, incluindo a mudança de hora. A app tem de estar aberta; o agendador não inicia o Windows nem acorda um computador suspenso.
+Under **Preferences → Scheduler**, select a mode and paint the hours with the mouse. The limited mode uses the smaller nonzero limit from global and scheduled limits. Seed only allows complete torrents; re-check existing files first if needed. The grid follows local system time, including daylight-saving changes. It does not start the OS or wake a sleeping computer.
 
-## Controlo remoto
+## Remote control
 
-1. Em **Preferências → Controlo remoto**, ativa o painel, escolhe uma porta e copia a chave. Guarda as preferências.
-2. Usa **Opções → Abrir controlo remoto** para abrir o painel neste computador.
-3. Para outro computador/telemóvel, ativa **Permitir outros dispositivos na rede local / VPN** e abre um dos endereços mostrados nas preferências.
-4. Introduz a chave no painel. Ela fica apenas na sessão desse navegador. **Gerar nova chave** invalida a anterior depois de guardar.
+1. Under **Preferences → Remote control**, enable the panel, choose its HTTP port and copy the access key. Save.
+2. Use **Options → Open remote control** on this computer.
+3. For another device, enable **Allow other devices on the local network / VPN** and open `http://THIS-COMPUTER-IP:PORT/` on that device.
+4. Enter the key. It is kept only in that browser session. Generating and saving a new key invalidates the old one.
 
-O controlo remoto está desativado por defeito e, ao ativar, aceita apenas ligações deste computador, até escolheres o acesso pela rede. Usa HTTP, por isso deve ser usado numa rede de confiança ou através de VPN, sem expor diretamente a porta à Internet. Pode ser necessário permitir a porta na firewall do Windows. A app não abre essa porta no router nem cria regras na firewall. Não exige administrador nem conta externa.
+Remote control is **disabled by default**. Once enabled it accepts only connections from this computer until LAN access is selected. HTTP is intended for a trusted network or VPN; do not expose the port directly to the public Internet. The app does not open the remote port in the router or change firewall rules. Your system firewall may need permission for incoming connections. No cloud account is needed.
 
-O painel permite adicionar magnets, URLs HTTP(S) de torrents ou enviar `.torrent`, iniciar/forçar/pausar/parar/verificar/remover torrents, alterar a fila, definir prioridades por ficheiro, ajustar os limites de largura de banda e consultar/atualizar/transferir itens RSS. As novas transferências remotas usam a pasta predefinida da aplicação. A remoção mantém os ficheiros.
+The panel accepts magnets, HTTP(S) torrent URLs and `.torrent` uploads; supports start/force/pause/stop/check/remove, queue order, file priorities and bandwidth limits; and can list, refresh and download RSS items. Remote additions use the default download folder. Removing a torrent keeps its files. Desktop preferences remain the place to configure subscriptions, scheduling and remote access.
 
-## Atualizar uma instalação portátil
+## Shortcuts
 
-Fecha a app, extrai o novo ZIP e substitui o executável e os ficheiros de documentação/licenças na pasta existente. **Mantém as pastas `Data` e `Downloads`**. A sessão anterior é lida automaticamente e as novas preferências recebem valores predefinidos. A chave remota, os feeds, os horários e a fila ficam em `Data` e acompanham a pasta portátil.
+On all desktops: **Ctrl+O** add torrent, **Ctrl+U** add magnet, **Ctrl+P** preferences and **Ctrl+F** search. Use **⌘** instead of Ctrl on macOS. Right-click a torrent for more actions. In Files, select one or more files and right-click to change priorities.
 
-## Atalhos
+Additional Windows shortcuts: Ctrl+N create torrent, Ctrl+A select all, Delete remove, F5 toggle details, F7 toggle sidebar. Counters are saved when the session changes and on normal exit.
 
-| Ação | Atalho |
-| --- | --- |
-| Adicionar torrent | Ctrl+O |
-| Adicionar magnet | Ctrl+U |
-| Criar torrent | Ctrl+N |
-| Preferências | Ctrl+P |
-| Pesquisar | Ctrl+F |
-| Selecionar todos | Ctrl+A |
-| Remover da lista | Delete |
-| Mostrar/ocultar detalhes | F5 |
-| Mostrar/ocultar barra lateral | F7 |
+## Build and test
 
-Botão direito num torrent para abrir a pasta, copiar o magnet, definir etiqueta, verificar, atualizar trackers ou forçar o início. No separador Ficheiros, seleciona ficheiros e usa o botão direito para mudar prioridades. Os contadores são guardados ao alterar a sessão e ao fechar normalmente a aplicação.
-
-## Compilar e testar
-
-Requer SDK .NET 10. A publicação para Windows também pode ser feita a partir de macOS/Linux; a interface só corre em Windows.
+Requires the .NET 10 SDK. The Windows interface runs on Windows; Avalonia provides the macOS/Linux interface.
 
 ```sh
-dotnet restore src/TorrentClassic.App
 dotnet run --project tests/TorrentClassic.Tests -c Release
 dotnet build src/TorrentClassic.App -c Release
+dotnet build src/TorrentClassic.Desktop -c Release
 ```
 
-No PowerShell, criar o pacote portátil completo com licenças e SHA256:
+Build the Windows portable package in PowerShell:
 
 ```powershell
 ./scripts/publish.ps1
 ```
 
-Para compilar apenas o executável a partir de outro sistema:
+Build macOS packages **on a Mac** (Python 3, Xcode command-line tools for ad-hoc signing):
 
 ```sh
-dotnet publish src/TorrentClassic.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=false -o artifacts/win-x64
+python3 scripts/publish-desktop.py osx-arm64
+python3 scripts/publish-desktop.py osx-x64
 ```
 
-Os testes de integração criam torrents de dados sintéticos e transferem-nos em loopback: verificam metadados magnet, pausa, persistência, retoma, prioridades, SHA256, duplicados, remoção sem apagar dados e mudança da pasta portátil. Verificam também a promoção automática da fila após uma transferência real, horários e limites, objetivos de partilha, RSS/Atom/filtros/ETag e autenticação, upload, origem dos pedidos e rotação da chave na API remota real. A CI executa-os em Windows e macOS, compila o `.exe` e abre as janelas em Windows para gerar capturas dos dois temas, RSS, fila, agendador e preferências remotas.
+Build Linux packages with Python 3 on Linux or macOS:
 
-O servidor remoto só é iniciado quando ativado. A fila/agendador usam um temporizador assíncrono de 2 segundos e o RSS verifica feeds vencidos a cada 30 segundos, respeitando o intervalo de cada subscrição. A aplicação principal continua a usar Windows Forms; o painel remoto é HTML/CSS/JavaScript sem frameworks nem recursos externos.
+```sh
+python3 scripts/publish-desktop.py linux-x64
+python3 scripts/publish-desktop.py linux-arm64
+```
 
-## Licenças e inspiração
+Every script includes license texts, bundled third-party notices and SHA256 checksums. CI builds all five packages, runs the engine integration suite on Windows/macOS/Linux, renders the real Windows UI, renders the Avalonia UI headlessly on both Mac architectures, and renders it under Xvfb on Linux x64/ARM64. Screenshots cover both themes, RSS, queue, scheduler and remote preferences. Engine tests transfer synthetic data over loopback and check magnet metadata, pause/restart, priorities, SHA256, duplicate detection, removal without deletion, portable relocation, queue promotion after a real limited transfer, schedule policies, seeding goals, RSS/Atom/filter/ETag behavior and the actual authenticated remote HTTP API.
 
-O código e os ícones originais desta aplicação são distribuídos sob a [licença MIT](LICENSE). As distribuições do projeto são gratuitas. A licença MIT permite a reutilização por terceiros segundo os seus próprios termos.
+The queue/scheduler tick every 2 seconds. RSS checks due feeds every 30 seconds while respecting each subscription's refresh interval. Remote Kestrel starts only when enabled. The remote panel uses plain HTML/CSS/JavaScript and no external resources. To disable Avalonia's **build-time** statistics when compiling manually, set `AVALONIA_TELEMETRY_OPTOUT=1`; package scripts and CI already do this. Deployed apps do not include build-time collection.
 
-As bibliotecas MonoTorrent 3.0.2, Mono.Nat 3.0.0 e ReusableTasks 4.0.0 são MIT, com os avisos de copyright e textos integrais preservados em [licenses/](licenses/). O runtime .NET e os seus componentes mantêm as respetivas licenças e avisos; a publicação inclui os textos fornecidos nos pacotes Microsoft. Consulta [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+## Licenses and inspiration
 
-Referência visual: [µTorrent Classic](https://www.utorrent.com/desktop/). µTorrent é uma marca dos seus titulares. A inspiração visual não concede direitos sobre essa marca ou sobre o software proprietário. O [REA](https://github.com/morluto/rea) foi considerado como ferramenta de análise; esta implementação não inclui REA nem resulta da descompilação do cliente original.
+Original app code and icons use the [MIT license](LICENSE). Project releases are free. MIT also allows third parties to reuse the code under its terms.
+
+MonoTorrent 3.0.2, Mono.Nat, ReusableTasks and Avalonia retain their original licenses. The MonoTorrent client assembly includes a documented fix for paused/disposed I/O blocking other transfers; see [the source snapshot and local changes](vendor/MonoTorrent.Client/README.md). Other MonoTorrent assemblies are unchanged NuGet binaries. No proprietary client is decompiled.
+
+Packages preserve the dependency copyright notices, the .NET runtime notices, and the Skia/HarfBuzz bundled third-party notices. Inter font files retain the SIL Open Font License. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and [licenses/](licenses/).
+
+Visual reference: [µTorrent Classic](https://www.utorrent.com/desktop/), a trademark of its owners. Visual inspiration grants no rights to that brand or its proprietary software. [REA](https://github.com/morluto/rea) was considered as an analysis tool; it is not included or required by this independently implemented app.

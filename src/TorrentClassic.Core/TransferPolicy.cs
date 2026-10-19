@@ -36,7 +36,7 @@ public sealed partial class TorrentService
             if (ratioDone || timeDone)
             {
                 entry.Saved.Running = false;
-                entry.WaitingReason = "Objetivo de partilha atingido";
+                entry.WaitingReason = "Seeding goal reached";
                 save = true;
             }
         }
@@ -56,7 +56,7 @@ public sealed partial class TorrentService
 
     public async Task MoveQueueAsync(TorrentEntry entry, int direction) => await MutateAsync(() =>
     {
-        if (direction is not (-1 or 1)) throw new ArgumentException("Direção inválida.");
+        if (direction is not (-1 or 1)) throw new ArgumentException("Invalid direction.");
         var ordered = entries.OrderBy(e => e.Saved.QueueOrder).ToArray();
         var index = Array.IndexOf(ordered, entry);
         var next = index + direction;

@@ -38,7 +38,7 @@ public sealed class ClassicGrid : DataGridView
 public sealed class ClassicTabs : TabControl
 {
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
-    public Palette Colors { get; set; } = Palette.For("Claro");
+    public Palette Colors { get; set; } = Palette.For("Light");
     public ClassicTabs() { DrawMode = TabDrawMode.OwnerDrawFixed; Dock = DockStyle.Fill; Padding = new Point(12, 4); }
     protected override void OnDrawItem(DrawItemEventArgs e)
     {
@@ -72,7 +72,7 @@ public sealed class ClassicTabs : TabControl
 public sealed class ThemeComboBox : ComboBox
 {
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
-    public Palette Colors { get; set; } = Palette.For("Claro");
+    public Palette Colors { get; set; } = Palette.For("Light");
     public ThemeComboBox() { DrawMode = DrawMode.OwnerDrawFixed; DropDownStyle = ComboBoxStyle.DropDownList; }
     protected override void OnDrawItem(DrawItemEventArgs e)
     {
@@ -86,7 +86,7 @@ public sealed class SpeedGraph : Control
 {
     readonly Queue<(long Down, long Up)> history = new();
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
-    public Palette Colors { get; set; } = Palette.For("Claro");
+    public Palette Colors { get; set; } = Palette.For("Light");
     public SpeedGraph() { DoubleBuffered = true; Dock = DockStyle.Fill; }
     public void Add(long down, long up) { history.Enqueue((down, up)); while (history.Count > 180) history.Dequeue(); Invalidate(); }
     protected override void OnPaint(PaintEventArgs e)
@@ -116,7 +116,7 @@ public sealed class SpeedGraph : Control
         }
         TextRenderer.DrawText(g, "↓ Download", Font, new Point(area.Left, area.Bottom + 12), Colors.Accent);
         TextRenderer.DrawText(g, "↑ Upload", Font, new Point(area.Left + 130, area.Bottom + 12), Color.FromArgb(78, 151, 220));
-        TextRenderer.DrawText(g, "Últimos 3 minutos", Font, new Rectangle(area.Right - 150, area.Bottom + 12, 150, 24), Colors.Muted, TextFormatFlags.Right);
+        TextRenderer.DrawText(g, "Last 3 minutes", Font, new Rectangle(area.Right - 150, area.Bottom + 12, 150, 24), Colors.Muted, TextFormatFlags.Right);
     }
 }
 

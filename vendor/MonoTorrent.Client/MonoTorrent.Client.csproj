@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>MonoTorrent.Client</AssemblyName>
+    <RootNamespace>MonoTorrent.Client</RootNamespace>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <Version>3.0.2</Version>
+    <InformationalVersion>3.0.2-torrentclassic.1</InformationalVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <NoWarn>$(NoWarn);CS0436;CS0649;SYSLIB0021;SYSLIB0045;SYSLIB0051;CS0618</NoWarn>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MonoTorrent" Version="3.0.2" ExcludeAssets="all" GeneratePathProperty="true" />
+    <PackageReference Include="Mono.Nat" Version="3.0.0" />
+    <PackageReference Include="ReusableTasks" Version="4.0.0" />
+  </ItemGroup>
+</Project>

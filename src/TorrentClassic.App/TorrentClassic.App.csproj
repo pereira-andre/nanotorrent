@@ -9,7 +9,7 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
     <Version>1.1.0</Version>
     <Product>Torrent Classic</Product>
-    <Description>Cliente BitTorrent clássico sem anúncios</Description>
+    <Description>Portable, ad-free classic BitTorrent client</Description>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
   <ItemGroup><ProjectReference Include="../TorrentClassic.Core/TorrentClassic.Core.csproj" /></ItemGroup>

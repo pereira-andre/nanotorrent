@@ -14,10 +14,10 @@ public sealed record SchedulerSettings
     public ScheduleMode ModeAt(DateTimeOffset localTime) => !Enabled ? ScheduleMode.Full : Hours[((int)localTime.DayOfWeek + 6) % 7 * 24 + localTime.Hour];
     public void Validate()
     {
-        if (Hours is null || Hours.Length != 168 || Hours.Any(h => !Enum.IsDefined(h))) throw new ArgumentException("O agendador precisa de 168 horas válidas.");
-        if (DownloadLimitKiB is < 1 or > 1000000 || UploadLimitKiB is < 1 or > 1000000) throw new ArgumentException("Os limites do agendador devem estar entre 1 e 1 000 000 KiB/s.");
+        if (Hours is null || Hours.Length != 168 || Hours.Any(h => !Enum.IsDefined(h))) throw new ArgumentException("The scheduler requires 168 valid hourly slots.");
+        if (DownloadLimitKiB is < 1 or > 1000000 || UploadLimitKiB is < 1 or > 1000000) throw new ArgumentException("Scheduler rate limits must be between 1 and 1,000,000 KiB/s.");
     }
-    public static string Name(ScheduleMode mode) => mode switch { ScheduleMode.Limited => "Limitado", ScheduleMode.SeedOnly => "Só partilha", ScheduleMode.Paused => "Pausa", _ => "Normal" };
+    public static string Name(ScheduleMode mode) => mode switch { ScheduleMode.Limited => "Limited", ScheduleMode.SeedOnly => "Seed only", ScheduleMode.Paused => "Pause", _ => "Normal" };
 }
 
 public sealed record QueueSettings
@@ -29,8 +29,8 @@ public sealed record QueueSettings
     public int SeedMinutes { get; set; }
     public void Validate()
     {
-        if (MaximumActive is < 1 or > 1000 || MaximumDownloads is < 1 or > 1000 || MaximumDownloads > MaximumActive) throw new ArgumentException("A fila precisa de 1 a 1000 torrents ativos; os downloads não podem exceder esse total.");
-        if (!double.IsFinite(SeedRatio) || SeedRatio is < 0 or > 10000 || SeedMinutes is < 0 or > 1000000) throw new ArgumentException("Objetivo de partilha inválido.");
+        if (MaximumActive is < 1 or > 1000 || MaximumDownloads is < 1 or > 1000 || MaximumDownloads > MaximumActive) throw new ArgumentException("The queue allows 1 to 1000 active torrents; active downloads cannot exceed that total.");
+        if (!double.IsFinite(SeedRatio) || SeedRatio is < 0 or > 10000 || SeedMinutes is < 0 or > 1000000) throw new ArgumentException("Invalid seeding goal.");
     }
 }
 
@@ -43,8 +43,8 @@ public sealed record RemoteSettings
     public static string NewToken() => Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
     public void Validate()
     {
-        if (Port is < 1024 or > 65535) throw new ArgumentException("A porta remota deve estar entre 1024 e 65535.");
-        if (Enabled && (Token.Length != 64 || !Token.All(Uri.IsHexDigit))) throw new ArgumentException("Gera uma chave de acesso remoto válida.");
+        if (Port is < 1024 or > 65535) throw new ArgumentException("The remote port must be between 1024 and 65535.");
+        if (Enabled && (Token.Length != 64 || !Token.All(Uri.IsHexDigit))) throw new ArgumentException("Generate a valid remote access key.");
     }
 }
 
@@ -59,9 +59,9 @@ public static class QueuePlanner
         {
             string? reason = null;
             if (!item.Desired || item.Error) continue;
-            if (mode == ScheduleMode.Paused) reason = "Agendador: em pausa";
-            else if (mode == ScheduleMode.SeedOnly && !item.Complete) reason = "Agendador: só partilha";
-            else if (settings.Enabled && !item.Forced && (active >= settings.MaximumActive || (!item.Complete && downloads >= settings.MaximumDownloads))) reason = "Em fila";
+            if (mode == ScheduleMode.Paused) reason = "Scheduler: paused";
+            else if (mode == ScheduleMode.SeedOnly && !item.Complete) reason = "Scheduler: seed only";
+            else if (settings.Enabled && !item.Forced && (active >= settings.MaximumActive || (!item.Complete && downloads >= settings.MaximumDownloads))) reason = "Queued";
             else if (!item.Forced) { active++; if (!item.Complete) downloads++; }
             result[item.Id] = reason;
         }

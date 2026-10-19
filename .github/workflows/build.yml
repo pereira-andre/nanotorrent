@@ -6,11 +6,15 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  AVALONIA_TELEMETRY_OPTOUT: '1'
 jobs:
   engine-tests:
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [windows-latest, macos-latest, ubuntu-24.04]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     steps:
@@ -50,3 +54,50 @@ jobs:
           path: |
             artifacts/TorrentClassic-win-x64-portable.zip
             artifacts/TorrentClassic-win-x64-portable.zip.sha256
+  portable-desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            rid: osx-arm64
+          - os: macos-15-intel
+            rid: osx-x64
+          - os: ubuntu-24.04
+            rid: linux-x64
+          - os: ubuntu-24.04-arm
+            rid: linux-arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Publish portable app and licenses
+        run: python3 scripts/publish-desktop.py ${{ matrix.rid }}
+      - name: Render packaged macOS app
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p artifacts/screenshots
+          'artifacts/${{ matrix.rid }}/TorrentClassic/Torrent Classic.app/Contents/MacOS/TorrentClassic.Desktop' --smoke-test "$PWD/artifacts/screenshots"
+          test -f artifacts/screenshots/result.txt
+      - name: Render packaged Linux app under X11
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p artifacts/screenshots
+          xvfb-run -a artifacts/${{ matrix.rid }}/TorrentClassic/TorrentClassic.Desktop --native-smoke-test "$PWD/artifacts/screenshots"
+          test -f artifacts/screenshots/result.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: interface-${{ matrix.rid }}
+          path: artifacts/screenshots
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portable-${{ matrix.rid }}
+          path: |
+            artifacts/TorrentClassic-${{ matrix.rid }}-portable.*

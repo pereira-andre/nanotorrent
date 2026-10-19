@@ -53,7 +53,7 @@ public sealed class RemoteControlServer(TorrentService service, RssService rss) 
             {
                 var header = context.Request.Headers.Authorization.ToString();
                 if (!header.StartsWith("Bearer ", StringComparison.Ordinal) || !CryptographicOperations.FixedTimeEquals(expected, SHA256.HashData(Encoding.UTF8.GetBytes(header[7..]))))
-                { context.Response.StatusCode = 401; await context.Response.WriteAsJsonAsync(new { error = "Chave de acesso inválida." }); return; }
+                { context.Response.StatusCode = 401; await context.Response.WriteAsJsonAsync(new { error = "Invalid access key." }); return; }
                 var origin = context.Request.Headers.Origin.ToString();
                 if (origin.Length > 0 && origin != $"{context.Request.Scheme}://{context.Request.Host}")
                 { context.Response.StatusCode = 403; return; }
@@ -62,7 +62,7 @@ public sealed class RemoteControlServer(TorrentService service, RssService rss) 
             catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested) { }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or InvalidDataException or IOException or System.Text.Json.JsonException or MonoTorrent.TorrentException)
             {
-                service.Log("Controlo remoto: " + e.Message);
+                service.Log("Remote control: " + e.Message);
                 if (!context.Response.HasStarted) { context.Response.StatusCode = 400; await context.Response.WriteAsJsonAsync(new { error = e.Message }); }
             }
         });
@@ -107,7 +107,7 @@ public sealed class RemoteControlServer(TorrentService service, RssService rss) 
                 case "remove": await service.RemoveAsync(entry); break;
                 case "up": await service.MoveQueueAsync(entry, -1); break;
                 case "down": await service.MoveQueueAsync(entry, 1); break;
-                default: return Results.BadRequest(new { error = "Ação desconhecida." });
+                default: return Results.BadRequest(new { error = "Unknown action." });
             }
             return Results.Ok();
         });
@@ -119,7 +119,7 @@ public sealed class RemoteControlServer(TorrentService service, RssService rss) 
         app.MapPost("/api/priority/{id}", async (string id, PriorityRequest request) =>
         {
             var entry = service.Entries.FirstOrDefault(e => e.Id == id); if (entry is null) return Results.NotFound();
-            if (request.Priority is not (Priority.High or Priority.Normal or Priority.Low or Priority.DoNotDownload)) throw new ArgumentException("Prioridade inválida.");
+            if (request.Priority is not (Priority.High or Priority.Normal or Priority.Low or Priority.DoNotDownload)) throw new ArgumentException("Invalid priority.");
             await service.SetPriorityAsync(entry, entry.Manager.Files.Where(f => request.Paths.Contains(f.Path)).ToArray(), request.Priority);
             return Results.Ok();
         });
@@ -133,7 +133,7 @@ public sealed class RemoteControlServer(TorrentService service, RssService rss) 
         app.MapPost("/api/rss/{id}/download/{item}", async (string id, string item, CancellationToken token) => { await rss.DownloadAsync(id, item, token); return Results.Ok(); });
         try { await app.StartAsync(); application = app; }
         catch { await app.DisposeAsync(); throw; }
-        service.Log($"Controlo remoto ativo na porta {config.Port} ({(config.AllowLan ? "rede local/VPN" : "apenas este computador")}).");
+        service.Log($"Remote control listening on port {config.Port} ({(config.AllowLan ? "local network/VPN" : "this computer only")}).");
     }
     async Task StopAsync()
     {

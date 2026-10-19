@@ -7,8 +7,8 @@ public sealed record Palette(Color Background, Color Surface, Color Text, Color 
 {
     public static Palette For(string theme)
     {
-        var dark = theme == "Escuro";
-        if (theme == "Sistema")
+        var dark = theme == "Dark";
+        if (theme == "System")
         {
             try { dark = (int?)Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize", "AppsUseLightTheme", 1) == 0; }
             catch { dark = false; }

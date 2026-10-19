@@ -37,11 +37,11 @@ public sealed record RssFeed
     public List<string> DownloadedIds { get; set; } = [];
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(Name) || Name.Length > 120) throw new ArgumentException("Dá um nome ao feed (até 120 caracteres).");
+        if (string.IsNullOrWhiteSpace(Name) || Name.Length > 120) throw new ArgumentException("Enter a feed name (up to 120 characters).");
         TorrentImporter.ValidateHttpUrl(Url);
-        if (Include.Length > 256 || Exclude.Length > 256) throw new ArgumentException("Os filtros RSS podem ter até 256 caracteres.");
-        if (RefreshMinutes is < 2 or > 1440) throw new ArgumentException("O intervalo RSS deve estar entre 2 e 1440 minutos.");
-        if (Destination.Length > 0 && !Path.IsPathFullyQualified(Destination)) throw new ArgumentException("A pasta do feed deve ter um caminho completo.");
+        if (Include.Length > 256 || Exclude.Length > 256) throw new ArgumentException("RSS filters may contain up to 256 characters.");
+        if (RefreshMinutes is < 2 or > 1440) throw new ArgumentException("The RSS refresh interval must be between 2 and 1440 minutes.");
+        if (Destination.Length > 0 && !Path.IsPathFullyQualified(Destination)) throw new ArgumentException("The feed download folder must be an absolute path.");
     }
 }
 
@@ -52,7 +52,7 @@ public static class FeedParser
         using var stream = new MemoryStream(xml);
         using var reader = XmlReader.Create(stream, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = TorrentImporter.MaximumBytes });
         var document = XDocument.Load(reader);
-        if (document.Root?.Name.LocalName is not ("rss" or "RDF" or "feed")) throw new FormatException("O endereço não devolveu um feed RSS ou Atom.");
+        if (document.Root?.Name.LocalName is not ("rss" or "RDF" or "feed")) throw new FormatException("The URL did not return an RSS or Atom feed.");
         return document.Descendants().Where(e => e.Name.LocalName is "item" or "entry").Take(500).Select(item =>
         {
             string Text(string name) => item.Elements().FirstOrDefault(e => e.Name.LocalName == name)?.Value.Trim() ?? "";
@@ -81,7 +81,7 @@ public static class TorrentImporter
 {
     public const int MaximumBytes = 4 * 1024 * 1024;
     public static HttpClient CreateClient() => new(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All }) { Timeout = TimeSpan.FromSeconds(20), DefaultRequestHeaders = { { "User-Agent", "TorrentClassic/1.1" } } };
-    public static Uri ValidateHttpUrl(string url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http" ? uri : throw new ArgumentException("O endereço deve começar por https:// ou http://.");
+    public static Uri ValidateHttpUrl(string url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http" ? uri : throw new ArgumentException("The URL must begin with https:// or http://.");
     public static async Task<byte[]> ReadBoundedAsync(Stream stream, CancellationToken token)
     {
         using var result = new MemoryStream();
@@ -89,7 +89,7 @@ public static class TorrentImporter
         int read;
         while ((read = await stream.ReadAsync(buffer, token)) > 0)
         {
-            if (result.Length + read > MaximumBytes) throw new InvalidDataException("O feed ou ficheiro torrent excede 4 MiB.");
+            if (result.Length + read > MaximumBytes) throw new InvalidDataException("The feed or torrent file exceeds 4 MiB.");
             result.Write(buffer, 0, read);
         }
         return result.ToArray();
@@ -105,7 +105,7 @@ public static class TorrentImporter
     }
     public static async Task<TorrentEntry> ImportBytesAsync(TorrentService service, byte[] bytes, string destination, bool start, CancellationToken token = default)
     {
-        if (bytes.Length > MaximumBytes) throw new InvalidDataException("O ficheiro torrent excede 4 MiB.");
+        if (bytes.Length > MaximumBytes) throw new InvalidDataException("The torrent file exceeds 4 MiB.");
         var temporary = Path.Combine(service.DataDirectory, "import-" + Guid.NewGuid().ToString("N") + ".torrent");
         try { await File.WriteAllBytesAsync(temporary, bytes, token); return await service.AddAsync(temporary, destination, start); }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
@@ -216,7 +216,7 @@ public sealed class RssService : IAsyncDisposable
             var entry = await TorrentImporter.ImportAsync(service, http, item.Source, feed.Destination.Length == 0 ? service.Preferences.DownloadDirectory : feed.Destination, true, token);
             item.TorrentId = entry.Id;
         }
-        catch (InvalidOperationException e) when (e.Message == "Este torrent já está na lista.") { }
+        catch (InvalidOperationException e) when (e.Message == "This torrent is already in the list.") { }
         item.Downloaded = true;
         if (!feed.DownloadedIds.Contains(item.Id)) feed.DownloadedIds.Add(item.Id);
         if (feed.DownloadedIds.Count > 2000) feed.DownloadedIds.RemoveRange(0, feed.DownloadedIds.Count - 2000);

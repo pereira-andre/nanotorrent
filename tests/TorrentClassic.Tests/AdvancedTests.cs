@@ -24,7 +24,7 @@ static class AdvancedTests
             var candidates = new[] { new QueueCandidate("a", true, false, false, false, 1), new QueueCandidate("b", true, false, false, false, 2), new QueueCandidate("c", true, true, false, false, 3), new QueueCandidate("forced", true, false, true, false, 4), new QueueCandidate("manual-pause", false, false, false, false, 5) };
             var queue = new QueueSettings { MaximumActive = 2, MaximumDownloads = 1 };
             var plan = QueuePlanner.Plan(candidates, queue, ScheduleMode.Full);
-            Assert(plan["a"] is null && plan["b"] == "Em fila" && plan["c"] is null && plan["forced"] is null && !plan.ContainsKey("manual-pause"), "Queue caps/forced/manual intent failed");
+            Assert(plan["a"] is null && plan["b"] == "Queued" && plan["c"] is null && plan["forced"] is null && !plan.ContainsKey("manual-pause"), "Queue caps/forced/manual intent failed");
             plan = QueuePlanner.Plan(candidates, queue, ScheduleMode.SeedOnly);
             Assert(plan["c"] is null && plan["forced"] is not null && plan["a"] is not null, "Seed-only schedule was bypassed");
             Assert(QueuePlanner.Plan(candidates, queue, ScheduleMode.Paused).Values.All(v => v is not null), "Paused schedule was bypassed");
@@ -36,17 +36,17 @@ static class AdvancedTests
             await using var service = new TorrentService(Path.Combine(folder, "app", "Data"), Offline() with { Queue = new QueueSettings { MaximumActive = 1, MaximumDownloads = 1 } });
             var a = await service.AddAsync(first, Path.Combine(folder, "download-one"), true);
             var b = await service.AddAsync(second, Path.Combine(folder, "download-two"), true);
-            Assert(b.WaitingReason == "Em fila" && !Display.Active(b.Manager), "Second transfer did not queue");
+            Assert(b.WaitingReason == "Queued" && !Display.Active(b.Manager), "Second transfer did not queue");
             await service.PauseAsync(a);
             await Wait(() => Display.Active(b.Manager));
             Assert(!a.Saved.Running && a.Manager.State == TorrentState.Paused, "Manual pause intent lost");
             await service.StartAsync(a); await service.MoveQueueAsync(b, -1);
-            Assert(a.WaitingReason == "Em fila", "Reordering did not displace previous transfer");
+            Assert(a.WaitingReason == "Queued", "Reordering did not displace previous transfer");
             await service.ForceStartAsync(a);
             Assert(Display.Active(a.Manager) && Display.Active(b.Manager), "Forced start did not bypass caps");
             await service.PauseAsync(a);
             await service.SavePreferencesAsync(service.Preferences with { Scheduler = new SchedulerSettings { Enabled = true, Hours = Enumerable.Repeat(ScheduleMode.Paused, 168).ToArray() } });
-            Assert(b.Saved.Running && b.Manager.State == TorrentState.Paused && b.Status.Contains("Agendador"), "Schedule pause erased resume intent");
+            Assert(b.Saved.Running && b.Manager.State == TorrentState.Paused && b.Status.Contains("Scheduler"), "Schedule pause erased resume intent");
             await service.SavePreferencesAsync(service.Preferences with { DownloadLimitKiB = 10, Scheduler = new SchedulerSettings { Enabled = true, Hours = Enumerable.Repeat(ScheduleMode.Limited, 168).ToArray(), DownloadLimitKiB = 20, UploadLimitKiB = 8 } });
             Assert(Display.Active(b.Manager) && !a.Saved.Running && !Display.Active(a.Manager), "Scheduler resumed manually paused torrent");
             Assert(service.Engine.Settings.MaximumDownloadRate == 10 * 1024 && service.Engine.Settings.MaximumUploadRate == 8 * 1024, "Schedule/global minimum rate failed");
@@ -58,7 +58,7 @@ static class AdvancedTests
             completed.Saved.Uploaded = completed.Manager.Torrent!.Size;
             await service.SavePreferencesAsync(service.Preferences with { Queue = service.Preferences.Queue with { SeedRatio = 1 } });
             await service.StartAsync(completed);
-            Assert(!completed.Saved.Running && completed.Status == "Objetivo de partilha atingido", "Seed ratio goal did not stop the seed");
+            Assert(!completed.Saved.Running && completed.Status == "Seeding goal reached", "Seed ratio goal did not stop the seed");
             await service.ForceStartAsync(completed);
             Assert(completed.Saved.Running && Display.Active(completed.Manager), "Forced start did not bypass seed goal");
         });
@@ -74,7 +74,7 @@ static class AdvancedTests
             await using var runtime = new ClientRuntime(client);
             var a = await client.AddAsync(first, Path.Combine(folder, "client", "Downloads"), true);
             var b = await client.AddAsync(second, Path.Combine(folder, "client", "Downloads"), true);
-            Assert(b.Status == "Em fila", "Successor should initially queue");
+            Assert(b.Status == "Queued", "Successor should initially queue");
             await runtime.StartAsync();
             await a.Manager.AddPeerAsync(new PeerInfo(new Uri($"ipv4://127.0.0.1:{port}")));
             await Wait(() => a.Manager.Complete, 45);
@@ -170,14 +170,14 @@ static class AdvancedTests
     static Preferences Offline(int port = 0) => new() { Port = port, EnableDht = false, EnablePeerExchange = false, EnableLocalDiscovery = false, EnablePortForwarding = false };
     public static async Task Preview(string root)
     {
-        var folder = Path.Combine(root, "preview"); var fixture = await Fixture(folder, "Distribuicao-livre", 1024 * 1024);
-        var second = await Fixture(folder, "Fotografias-exemplo", 512 * 1024);
+        var folder = Path.Combine(root, "preview"); var fixture = await Fixture(folder, "Free-distribution", 1024 * 1024);
+        var second = await Fixture(folder, "Example-photographs", 512 * 1024);
         await using var service = new TorrentService(Path.Combine(folder, "app", "Data"), Offline() with { DownloadDirectory = folder });
         foreach (var torrent in new[] { fixture, second }) { var entry = await service.AddAsync(torrent, folder, false); await service.CheckAsync(entry); }
-        var xml = "<rss><channel><item><title>Distribuição de exemplo</title><enclosure url='https://preview.test/example.torrent'/></item></channel></rss>";
+        var xml = "<rss><channel><item><title>Example distribution</title><enclosure url='https://preview.test/example.torrent'/></item></channel></rss>";
         using var http = new HttpClient(new StubHandler(_ => new(HttpStatusCode.OK) { Content = new StringContent(xml) }));
         await using var rss = new RssService(service, http);
-        var feed = new RssFeed { Name = "Exemplos livres", Url = "https://preview.test/rss" }; await rss.SaveFeedAsync(feed); await rss.RefreshAsync(feed.Id);
+        var feed = new RssFeed { Name = "Free examples", Url = "https://preview.test/rss" }; await rss.SaveFeedAsync(feed); await rss.RefreshAsync(feed.Id);
         await using var server = new RemoteControlServer(service, rss);
         await server.ConfigureAsync(new RemoteSettings { Enabled = true, Port = FreePort(), Token = new string('a', 64) });
         Console.WriteLine("PREVIEW " + server.LocalUrl);

@@ -24,6 +24,11 @@ try
         Assert(Directory.GetFiles(root, "corrupt.json.invalid-*").Length == 1, "Corrupt original not retained");
         JsonStore.Save(file, result);
         Assert(JsonStore.Load(file, () => new Preferences { Port = 1 }).Port == 51483, "Atomic JSON save failed");
+        Assert(typeof(ClientEngine).Assembly.GetCustomAttributesData().Any(a => a.AttributeType.Name == "AssemblyInformationalVersionAttribute" && a.ConstructorArguments[0].Value?.ToString()?.Contains("torrentclassic.1") == true), "The patched engine was not loaded");
+        var legacy = Path.Combine(root, "legacy", "Data");
+        JsonStore.Save(Path.Combine(legacy, "preferences.json"), Offline(0) with { Theme = "Escuro" });
+        await using var migrated = new TorrentService(legacy);
+        Assert(migrated.Preferences.Theme == "Dark", "Legacy theme preference was not migrated to English");
     });
     await Test("Real loopback transfer: magnet metadata, pause, restart, priority and SHA256", async () =>
     {
@@ -82,7 +87,7 @@ try
         var source = Path.Combine(downloads, "portable.txt"); await File.WriteAllTextAsync(source, "This file moves with the portable application.");
         var torrent = Path.Combine(root, "portable.torrent");
         await new TorrentCreator { PieceLength = 16384 }.CreateAsync(new TorrentFileSource(source), torrent);
-        await using (var client = new TorrentService(data, Offline(0) with { DownloadDirectory = downloads, Theme = "Escuro" }))
+        await using (var client = new TorrentService(data, Offline(0) with { DownloadDirectory = downloads, Theme = "Dark" }))
         {
             await client.AddAsync(torrent, downloads, false);
         }
@@ -90,7 +95,7 @@ try
         await using (var client = new TorrentService(Path.Combine(moved, "Data")))
         {
             await client.RestoreAsync();
-            Assert(client.Entries.Count == 1 && client.Preferences.Theme == "Escuro", "Moved settings/session failed to load");
+            Assert(client.Entries.Count == 1 && client.Preferences.Theme == "Dark", "Moved settings/session failed to load");
             Assert(client.Preferences.DownloadDirectory == Path.Combine(moved, "Downloads"), "Download preference was not rebased");
             var entry = client.Entries.Single();
             Assert(entry.Manager.SavePath == Path.Combine(moved, "Downloads"), "Torrent destination was not rebased");
@@ -107,7 +112,7 @@ try
         await using (var client = new TorrentService(folder, Offline(0)))
         {
             await client.RestoreAsync();
-            Assert(client.Entries.Count == 0 && client.Messages.Any(m => m.Contains("restaurar")), "Unavailable torrent was not reported");
+            Assert(client.Entries.Count == 0 && client.Messages.Any(m => m.Contains("restore")), "Unavailable torrent was not reported");
         }
         Assert(JsonStore.Load<SavedTorrent[]>(Path.Combine(folder, "session.json"), () => []).Single().Id == "missing", "Unavailable torrent was lost from saved session");
     });

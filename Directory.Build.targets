@@ -1,0 +1,6 @@
+<Project>
+  <!-- Use upstream component assemblies, and the locally built client assembly. -->
+  <ItemGroup>
+    <Reference Include="$(NuGetPackageRoot)monotorrent/3.0.2/lib/net6.0/*.dll" Exclude="$(NuGetPackageRoot)monotorrent/3.0.2/lib/net6.0/MonoTorrent.Client.dll" />
+  </ItemGroup>
+</Project>

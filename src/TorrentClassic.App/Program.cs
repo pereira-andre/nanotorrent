@@ -1,5 +1,6 @@
 using System.IO.Pipes;
 using System.Text.Json;
+using System.Globalization;
 using MonoTorrent;
 using TorrentClassic.Core;
 
@@ -11,6 +12,8 @@ internal static class Program
     [STAThread]
     static int Main(string[] args)
     {
+        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("en-GB");
+        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("en-GB");
         ApplicationConfiguration.Initialize();
         var smoke = args.Length == 2 && args[0] == "--smoke-test";
         using var mutex = new Mutex(true, @"Local\" + InstanceName, out var first);
@@ -24,7 +27,7 @@ internal static class Program
                 writer.WriteLine(JsonSerializer.Serialize(args));
                 return 0;
             }
-            catch { MessageBox.Show("O Torrent Classic já está aberto. Aguarda alguns segundos e tenta novamente.", "Torrent Classic"); return 1; }
+            catch { MessageBox.Show("Torrent Classic is already running. Wait a few seconds and try again.", "Torrent Classic"); return 1; }
         }
         var root = smoke ? Path.Combine(Path.GetTempPath(), "TorrentClassic-Smoke-" + Guid.NewGuid().ToString("N")) : Path.Combine(AppContext.BaseDirectory, "Data");
         Application.ThreadException += (_, e) =>
@@ -67,7 +70,7 @@ internal static class Program
         catch (Exception e)
         {
             try { File.WriteAllText(Path.Combine(smoke ? args[1] : root, "startup-error.log"), e.ToString()); } catch (IOException) { } catch (UnauthorizedAccessException) { }
-            if (!smoke) MessageBox.Show("Não foi possível iniciar o Torrent Classic.\n\n" + e.Message + "\n\nExtrai a aplicação para uma pasta onde possas escrever (por exemplo, o Ambiente de Trabalho ou uma pen USB).", "Torrent Classic", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (!smoke) MessageBox.Show("Could not start Torrent Classic.\n\n" + e.Message + "\n\nExtract the app to a writable folder, such as your Desktop or a USB drive.", "Torrent Classic", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
     }
@@ -104,7 +107,7 @@ internal static class Program
     static async Task SmokeAsync(MainForm form, string output, string root)
     {
         Directory.CreateDirectory(output);
-        foreach (var name in new[] { "Exemplo de distribuição Linux.iso", "Fotografias de exemplo.zip", "Documentação livre.pdf" })
+        foreach (var name in new[] { "Example Linux distribution.iso", "Example photographs.zip", "Free documentation.pdf" })
         {
             var source = Path.Combine(root, name);
             await File.WriteAllBytesAsync(source, System.Text.Encoding.UTF8.GetBytes("Torrent Classic · " + name));
@@ -115,8 +118,8 @@ internal static class Program
             if (form.Service.Entries.Count == 1) await form.Service.CheckAsync(entry);
         }
         form.SelectFirstTorrent();
-        await form.Runtime.Rss.SaveFeedAsync(new RssFeed { Name = "Distribuições de exemplo", Url = "https://example.invalid/rss", Enabled = false });
-        foreach (var theme in new[] { "Claro", "Escuro" })
+        await form.Runtime.Rss.SaveFeedAsync(new RssFeed { Name = "Example distributions", Url = "https://example.invalid/rss", Enabled = false });
+        foreach (var theme in new[] { "Light", "Dark" })
         {
             await form.Service.SavePreferencesAsync(form.Service.Preferences with { Theme = theme });
             form.ApplyTheme();
@@ -130,8 +133,8 @@ internal static class Program
             dialog.Refresh();
             using var dialogBitmap = new Bitmap(dialog.Width, dialog.Height);
             dialog.DrawToBitmap(dialogBitmap, new Rectangle(0, 0, dialog.Width, dialog.Height));
-            dialogBitmap.Save(Path.Combine(output, "preferencias-" + theme.ToLowerInvariant() + ".png"));
-            foreach (var (index, title) in new[] { (3, "fila"), (4, "agendador"), (5, "remoto") })
+            dialogBitmap.Save(Path.Combine(output, "preferences-" + theme.ToLowerInvariant() + ".png"));
+            foreach (var (index, title) in new[] { (3, "queue"), (4, "scheduler"), (5, "remote") })
             {
                 dialog.SelectPage(index); dialog.Refresh();
                 using var advancedBitmap = new Bitmap(dialog.Width, dialog.Height);

@@ -18,7 +18,7 @@ public sealed class MainForm : Form
     readonly ToolStripStatusLabel networkStatus = new() { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
     readonly ToolStripStatusLabel downStatus = new();
     readonly ToolStripStatusLabel upStatus = new();
-    readonly ToolStripTextBox search = new() { AutoSize = false, Width = 190, ToolTipText = "Filtrar torrents pelo nome (Ctrl+F)" };
+    readonly ToolStripTextBox search = new() { AutoSize = false, Width = 190, ToolTipText = "Filter torrents by name (Ctrl+F)" };
     readonly TreeView categories = new() { Dock = DockStyle.Fill, BorderStyle = BorderStyle.None, HideSelection = false, ShowLines = false, ShowPlusMinus = false, ShowRootLines = false, FullRowSelect = true, ItemHeight = 27, Indent = 17 };
     readonly SplitContainer outer = new() { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel1, Size = new Size(1140, 650), SplitterWidth = 4, Panel1MinSize = 145, SplitterDistance = 185 };
     readonly SplitContainer inner = new() { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, Size = new Size(940, 650), SplitterWidth = 5, Panel1MinSize = 120, Panel2MinSize = 145, SplitterDistance = 395 };
@@ -32,7 +32,7 @@ public sealed class MainForm : Form
     readonly Dictionary<string, Label> values = [];
     readonly System.Windows.Forms.Timer timer = new() { Interval = 1000 };
     readonly NotifyIcon tray = new() { Text = "Torrent Classic" };
-    readonly ToolStripMenuItem themeMenu = new("Aspeto");
+    readonly ToolStripMenuItem themeMenu = new("Appearance");
     readonly TaskCompletionSource ready = new();
     readonly Queue<string> pendingSources = new();
     Palette palette;
@@ -70,27 +70,27 @@ public sealed class MainForm : Form
         AllowDrop = true;
         MainMenuStrip = menu;
         BuildMenus(); BuildToolbar(); BuildCategories(); BuildDetails();
-        foreach (var (name, width, numeric) in new (string, int, bool)[] { ("#", 36, true), ("Nome", 285, false), ("Tamanho", 85, true), ("Concluído", 105, false), ("Estado", 150, false), ("Seeds", 60, true), ("Peers", 60, true), ("Vel. download", 100, true), ("Vel. upload", 100, true), ("Tempo restante", 105, true), ("Rácio", 65, true), ("Etiqueta", 95, false) }) torrents.AddColumn(name, width, numeric);
+        foreach (var (name, width, numeric) in new (string, int, bool)[] { ("#", 36, true), ("Name", 285, false), ("Size", 85, true), ("Done", 105, false), ("Status", 150, false), ("Seeds", 60, true), ("Peers", 60, true), ("Download speed", 100, true), ("Upload speed", 100, true), ("ETA", 105, true), ("Ratio", 65, true), ("Label", 95, false) }) torrents.AddColumn(name, width, numeric);
         torrents.CellPainting += PaintProgress;
         torrents.SelectionChanged += (_, _) => { fileOwner = null; _ = RefreshDetailsSafelyAsync(); };
         torrents.CellDoubleClick += (_, e) => { if (e.RowIndex >= 0) OpenSelectedFolder(); };
         torrents.ColumnHeaderMouseClick += (_, e) => { descending = sortColumn == e.ColumnIndex && !descending; sortColumn = e.ColumnIndex; RefreshRows(); };
         torrents.KeyDown += (_, e) => { if (e.KeyCode == Keys.Delete) { e.Handled = true; _ = Run(RemoveSelectedAsync); } };
         var context = new ContextMenuStrip();
-        context.Items.Add(Item("Iniciar", () => SelectedOperation(service.StartAsync), icon: "start"));
-        context.Items.Add(Item("Início forçado (ignorar fila)", () => SelectedOperation(service.ForceStartAsync)));
-        context.Items.Add(Item("Pausar", () => SelectedOperation(service.PauseAsync), icon: "pause"));
-        context.Items.Add(Item("Parar", () => SelectedOperation(service.StopAsync), icon: "stop"));
+        context.Items.Add(Item("Start", () => SelectedOperation(service.StartAsync), icon: "start"));
+        context.Items.Add(Item("Force start (bypass queue)", () => SelectedOperation(service.ForceStartAsync)));
+        context.Items.Add(Item("Pause", () => SelectedOperation(service.PauseAsync), icon: "pause"));
+        context.Items.Add(Item("Stop", () => SelectedOperation(service.StopAsync), icon: "stop"));
         context.Items.Add(new ToolStripSeparator());
-        context.Items.Add(Item("Abrir pasta de destino", () => { OpenSelectedFolder(); return Task.CompletedTask; }));
-        context.Items.Add(Item("Copiar magnet link", () => { if (Selected is { } entry) Clipboard.SetText(entry.Manager.MagnetLink.ToV1String()); return Task.CompletedTask; }));
-        context.Items.Add(Item("Definir etiqueta…", SetLabelAsync));
-        context.Items.Add(Item("Forçar verificação", () => SelectedOperation(service.CheckAsync)));
-        context.Items.Add(Item("Atualizar trackers", AnnounceAsync));
-        context.Items.Add(Item("Subir na fila", () => SelectedOperation(e => service.MoveQueueAsync(e, -1)), icon: "up"));
-        context.Items.Add(Item("Descer na fila", () => SelectedOperation(e => service.MoveQueueAsync(e, 1)), icon: "down"));
+        context.Items.Add(Item("Open download folder", () => { OpenSelectedFolder(); return Task.CompletedTask; }));
+        context.Items.Add(Item("Copy magnet link", () => { if (Selected is { } entry) Clipboard.SetText(entry.Manager.MagnetLink.ToV1String()); return Task.CompletedTask; }));
+        context.Items.Add(Item("Set label…", SetLabelAsync));
+        context.Items.Add(Item("Force recheck", () => SelectedOperation(service.CheckAsync)));
+        context.Items.Add(Item("Update trackers", AnnounceAsync));
+        context.Items.Add(Item("Move up in queue", () => SelectedOperation(e => service.MoveQueueAsync(e, -1)), icon: "up"));
+        context.Items.Add(Item("Move down in queue", () => SelectedOperation(e => service.MoveQueueAsync(e, 1)), icon: "down"));
         context.Items.Add(new ToolStripSeparator());
-        context.Items.Add(Item("Remover da lista…", RemoveSelectedAsync, icon: "remove"));
+        context.Items.Add(Item("Remove from list…", RemoveSelectedAsync, icon: "remove"));
         torrents.ContextMenuStrip = context;
         torrents.CellMouseDown += (_, e) => { if (e.Button == MouseButtons.Right && e.RowIndex >= 0 && !torrents.Rows[e.RowIndex].Selected) { torrents.ClearSelection(); torrents.Rows[e.RowIndex].Selected = true; } };
         outer.Panel1.Controls.Add(categories);
@@ -103,11 +103,11 @@ public sealed class MainForm : Form
         Controls.Add(outer); Controls.Add(toolbar); Controls.Add(menu); Controls.Add(status);
         tray.Icon = Icon;
         var trayMenu = new ContextMenuStrip();
-        trayMenu.Items.Add("Mostrar Torrent Classic", null, (_, _) => ShowWindow());
-        trayMenu.Items.Add("Iniciar todos", null, (_, _) => _ = Run(async () => { foreach (var entry in service.Entries) await service.StartAsync(entry); }));
-        trayMenu.Items.Add("Pausar todos", null, (_, _) => _ = Run(async () => { foreach (var entry in service.Entries) await service.PauseAsync(entry); }));
+        trayMenu.Items.Add("Show Torrent Classic", null, (_, _) => ShowWindow());
+        trayMenu.Items.Add("Start all", null, (_, _) => _ = Run(async () => { foreach (var entry in service.Entries) await service.StartAsync(entry); }));
+        trayMenu.Items.Add("Pause all", null, (_, _) => _ = Run(async () => { foreach (var entry in service.Entries) await service.PauseAsync(entry); }));
         trayMenu.Items.Add(new ToolStripSeparator());
-        trayMenu.Items.Add("Sair", null, (_, _) => { exitRequested = true; Close(); });
+        trayMenu.Items.Add("Exit", null, (_, _) => { exitRequested = true; Close(); });
         tray.ContextMenuStrip = trayMenu;
         tray.DoubleClick += (_, _) => ShowWindow();
         Resize += (_, _) => { if (WindowState == FormWindowState.Minimized && service.Preferences.MinimizeToTray) { tray.Visible = true; Hide(); } };
@@ -136,33 +136,33 @@ public sealed class MainForm : Form
     }
     void BuildMenus()
     {
-        var file = new ToolStripMenuItem("&Ficheiro");
-        file.DropDownItems.Add(Item("Adicionar torrent…", ChooseTorrentAsync, Keys.Control | Keys.O, "add"));
-        file.DropDownItems.Add(Item("Adicionar magnet link…", () => AddSourceAsync(""), Keys.Control | Keys.U, "link"));
-        file.DropDownItems.Add(Item("Criar novo torrent…", CreateTorrentAsync, Keys.Control | Keys.N, "create"));
+        var file = new ToolStripMenuItem("&File");
+        file.DropDownItems.Add(Item("Add torrent…", ChooseTorrentAsync, Keys.Control | Keys.O, "add"));
+        file.DropDownItems.Add(Item("Add magnet link…", () => AddSourceAsync(""), Keys.Control | Keys.U, "link"));
+        file.DropDownItems.Add(Item("Create new torrent…", CreateTorrentAsync, Keys.Control | Keys.N, "create"));
         file.DropDownItems.Add(new ToolStripSeparator());
-        file.DropDownItems.Add(Item("Sair", () => { exitRequested = true; Close(); return Task.CompletedTask; }, Keys.Alt | Keys.F4));
-        var options = new ToolStripMenuItem("&Opções");
-        options.DropDownItems.Add(Item("Preferências…", PreferencesAsync, Keys.Control | Keys.P, "settings"));
-        foreach (var mode in new[] { "Sistema", "Claro", "Escuro" }) themeMenu.DropDownItems.Add(Item(mode, () => ChangeThemeAsync(mode)));
+        file.DropDownItems.Add(Item("Exit", () => { exitRequested = true; Close(); return Task.CompletedTask; }, Keys.Alt | Keys.F4));
+        var options = new ToolStripMenuItem("&Options");
+        options.DropDownItems.Add(Item("Preferences…", PreferencesAsync, Keys.Control | Keys.P, "settings"));
+        foreach (var mode in new[] { "System", "Light", "Dark" }) themeMenu.DropDownItems.Add(Item(mode, () => ChangeThemeAsync(mode)));
         options.DropDownItems.Add(themeMenu);
-        options.DropDownItems.Add(Item("Abrir controlo remoto", () =>
+        options.DropDownItems.Add(Item("Open remote control", () =>
         {
-            if (!runtime.Remote.IsRunning) { MessageBox.Show(this, "Ativa o controlo remoto em Preferências → Controlo remoto e guarda a chave de acesso."); return PreferencesAsync(); }
+            if (!runtime.Remote.IsRunning) { MessageBox.Show(this, "Enable remote control in Preferences → Remote control and copy your access key."); return PreferencesAsync(); }
             Process.Start(new ProcessStartInfo(runtime.Remote.LocalUrl) { UseShellExecute = true }); return Task.CompletedTask;
         }));
-        var view = new ToolStripMenuItem("&Ver");
-        var showDetails = new ToolStripMenuItem("Painel de detalhes") { CheckOnClick = true, Checked = true, ShortcutKeys = Keys.F5 };
+        var view = new ToolStripMenuItem("&View");
+        var showDetails = new ToolStripMenuItem("Details panel") { CheckOnClick = true, Checked = true, ShortcutKeys = Keys.F5 };
         showDetails.CheckedChanged += (_, _) => inner.Panel2Collapsed = !showDetails.Checked;
-        var showSidebar = new ToolStripMenuItem("Barra lateral") { CheckOnClick = true, Checked = true, ShortcutKeys = Keys.F7 };
+        var showSidebar = new ToolStripMenuItem("Sidebar") { CheckOnClick = true, Checked = true, ShortcutKeys = Keys.F7 };
         showSidebar.CheckedChanged += (_, _) => outer.Panel1Collapsed = !showSidebar.Checked;
         view.DropDownItems.AddRange([showDetails, showSidebar]);
-        view.DropDownItems.Add(Item("Selecionar todos", () => { torrents.SelectAll(); return Task.CompletedTask; }, Keys.Control | Keys.A));
-        view.DropDownItems.Add(Item("Pesquisar", () => { search.Focus(); return Task.CompletedTask; }, Keys.Control | Keys.F));
-        var help = new ToolStripMenuItem("A&juda");
-        help.DropDownItems.Add(Item("Sobre o Torrent Classic", () =>
+        view.DropDownItems.Add(Item("Select all", () => { torrents.SelectAll(); return Task.CompletedTask; }, Keys.Control | Keys.A));
+        view.DropDownItems.Add(Item("Search", () => { search.Focus(); return Task.CompletedTask; }, Keys.Control | Keys.F));
+        var help = new ToolStripMenuItem("&Help");
+        help.DropDownItems.Add(Item("About Torrent Classic", () =>
         {
-            MessageBox.Show(this, "Torrent Classic 1.1.0\n\nCliente BitTorrent gratuito e open source.\nInterface inspirada no µTorrent Classic.\nProjeto independente, sem afiliação ao µTorrent ou à Rainberry.\n\nCódigo da aplicação: licença MIT.\nMotor BitTorrent: MonoTorrent (MIT).\nLicenças completas na pasta licenses da distribuição.\n\nSem anúncios, telemetria ou subscrições.", "Sobre", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "Torrent Classic 1.1.0\n\nFree and open-source BitTorrent client.\nInterface inspired by µTorrent Classic.\nIndependent project, not affiliated with µTorrent or Rainberry.\n\nApplication code: MIT license.\nBitTorrent engine: MonoTorrent (MIT), with a local I/O fix.\nFull licenses are included in the distribution.\n\nNo ads, telemetry or subscriptions.", "About", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return Task.CompletedTask;
         }));
         menu.Items.AddRange([file, options, view, help]);
@@ -174,28 +174,28 @@ public sealed class MainForm : Form
             var button = new ToolStripButton { Image = Icons.Make(kind), DisplayStyle = ToolStripItemDisplayStyle.Image, ToolTipText = tooltip, AutoSize = false, Width = 32, Height = 29 };
             button.Click += (_, _) => _ = Run(action); toolbar.Items.Add(button);
         }
-        Button("add", "Adicionar torrent (Ctrl+O)", ChooseTorrentAsync);
-        Button("link", "Adicionar magnet link (Ctrl+U)", () => AddSourceAsync(""));
-        Button("create", "Criar novo torrent (Ctrl+N)", CreateTorrentAsync);
+        Button("add", "Add torrent (Ctrl+O)", ChooseTorrentAsync);
+        Button("link", "Add magnet link (Ctrl+U)", () => AddSourceAsync(""));
+        Button("create", "Create new torrent (Ctrl+N)", CreateTorrentAsync);
         toolbar.Items.Add(new ToolStripSeparator());
-        Button("remove", "Remover da lista (Delete)", RemoveSelectedAsync);
+        Button("remove", "Remove from list (Delete)", RemoveSelectedAsync);
         toolbar.Items.Add(new ToolStripSeparator());
-        Button("start", "Iniciar", () => SelectedOperation(service.StartAsync));
-        Button("pause", "Pausar", () => SelectedOperation(service.PauseAsync));
-        Button("stop", "Parar", () => SelectedOperation(service.StopAsync));
+        Button("start", "Start", () => SelectedOperation(service.StartAsync));
+        Button("pause", "Pause", () => SelectedOperation(service.PauseAsync));
+        Button("stop", "Stop", () => SelectedOperation(service.StopAsync));
         toolbar.Items.Add(new ToolStripSeparator());
-        Button("check", "Forçar verificação", () => SelectedOperation(service.CheckAsync));
-        Button("up", "Subir na fila", () => SelectedOperation(e => service.MoveQueueAsync(e, -1)));
-        Button("down", "Descer na fila", () => SelectedOperation(e => service.MoveQueueAsync(e, 1)));
-        Button("settings", "Preferências (Ctrl+P)", PreferencesAsync);
+        Button("check", "Force recheck", () => SelectedOperation(service.CheckAsync));
+        Button("up", "Move up in queue", () => SelectedOperation(e => service.MoveQueueAsync(e, -1)));
+        Button("down", "Move down in queue", () => SelectedOperation(e => service.MoveQueueAsync(e, 1)));
+        Button("settings", "Preferences (Ctrl+P)", PreferencesAsync);
         search.Alignment = ToolStripItemAlignment.Right;
-        search.TextBox.PlaceholderText = "Pesquisar torrents";
+        search.TextBox.PlaceholderText = "Search torrents";
         search.TextChanged += (_, _) => RefreshRows();
         toolbar.Items.Add(search);
     }
     void BuildCategories()
     {
-        foreach (var (key, text) in new[] { ("all", "Torrents"), ("downloading", "A transferir"), ("queued", "Em fila"), ("seeding", "A partilhar"), ("completed", "Concluídos"), ("active", "Ativos"), ("inactive", "Inativos"), ("labels", "Etiquetas"), ("unlabelled", "Sem etiqueta"), ("rss", "Feeds RSS") })
+        foreach (var (key, text) in new[] { ("all", "Torrents"), ("downloading", "Downloading"), ("queued", "Queued"), ("seeding", "Seeding"), ("completed", "Completed"), ("active", "Active"), ("inactive", "Inactive"), ("labels", "Labels"), ("unlabelled", "No label"), ("rss", "RSS feeds") })
         {
             var node = new TreeNode(text) { Name = key, Tag = text };
             if (key is "downloading" or "queued" or "seeding" or "completed" or "active" or "inactive") categories.Nodes[0].Nodes.Add(node);
@@ -214,10 +214,10 @@ public sealed class MainForm : Form
     }
     void BuildDetails()
     {
-        var general = new TabPage("Geral") { AutoScroll = true };
+        var general = new TabPage("General") { AutoScroll = true };
         var table = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 4, Padding = new Padding(10, 8, 10, 8) };
         table.ColumnStyles.Add(new(SizeType.Absolute, 112)); table.ColumnStyles.Add(new(SizeType.Percent, 50)); table.ColumnStyles.Add(new(SizeType.Absolute, 112)); table.ColumnStyles.Add(new(SizeType.Percent, 50));
-        var labels = new[] { "Nome", "Estado", "Tamanho", "Concluído", "Recebido", "Enviado", "Download", "Upload", "Seeds", "Peers", "Adicionado", "Rácio", "Guardar em", "Hash" };
+        var labels = new[] { "Name", "Status", "Size", "Done", "Downloaded", "Uploaded", "Download", "Upload", "Seeds", "Peers", "Added", "Ratio", "Save in", "Hash" };
         for (int i = 0; i < labels.Length; i++)
         {
             var row = i / 2; var col = i % 2 * 2;
@@ -227,16 +227,16 @@ public sealed class MainForm : Form
             values[labels[i]] = value; table.Controls.Add(value, col + 1, row);
         }
         general.Controls.Add(table);
-        foreach (var (title, control) in new (string, Control)[] { ("Geral", general), ("Trackers", trackers), ("Peers", peers), ("Ficheiros", files), ("Velocidade", graph), ("Registo", log) })
+        foreach (var (title, control) in new (string, Control)[] { ("General", general), ("Trackers", trackers), ("Peers", peers), ("Files", files), ("Speed", graph), ("Log", log) })
         {
             if (control is TabPage page) details.TabPages.Add(page);
             else { var tab = new TabPage(title); tab.Controls.Add(control); details.TabPages.Add(tab); }
         }
-        foreach (var (name, width) in new[] { ("Nome", 420), ("Tamanho", 100), ("Concluído", 100), ("Prioridade", 130) }) files.AddColumn(name, width);
-        foreach (var (name, width) in new[] { ("Endereço", 240), ("Cliente", 170), ("Concluído", 100), ("Download", 110), ("Upload", 110), ("Encriptação", 120) }) peers.AddColumn(name, width);
-        foreach (var (name, width) in new[] { ("Nome", 430), ("Estado", 150), ("Próxima atualização", 160) }) trackers.AddColumn(name, width);
+        foreach (var (name, width) in new[] { ("Name", 420), ("Size", 100), ("Done", 100), ("Priority", 130) }) files.AddColumn(name, width);
+        foreach (var (name, width) in new[] { ("Address", 240), ("Client", 170), ("Done", 100), ("Download", 110), ("Upload", 110), ("Encryption", 120) }) peers.AddColumn(name, width);
+        foreach (var (name, width) in new[] { ("Name", 430), ("Status", 150), ("Next update", 160) }) trackers.AddColumn(name, width);
         var priorities = new ContextMenuStrip();
-        foreach (var (label, priority) in new[] { ("Alta", Priority.High), ("Normal", Priority.Normal), ("Baixa", Priority.Low), ("Não transferir", Priority.DoNotDownload) })
+        foreach (var (label, priority) in new[] { ("High", Priority.High), ("Normal", Priority.Normal), ("Low", Priority.Low), ("Do not download", Priority.DoNotDownload) })
             priorities.Items.Add(Item(label, async () => { if (Selected is { } entry) { var selectedFiles = files.SelectedRows.Cast<DataGridViewRow>().Select(r => r.Tag).OfType<ITorrentManagerFile>().ToArray(); await service.SetPriorityAsync(entry, selectedFiles, priority); await RefreshDetailsAsync(); } }));
         files.ContextMenuStrip = priorities;
         files.CellMouseDown += (_, e) => { if (e.Button == MouseButtons.Right && e.RowIndex >= 0 && !files.Rows[e.RowIndex].Selected) { files.ClearSelection(); files.Rows[e.RowIndex].Selected = true; } };
@@ -250,7 +250,7 @@ public sealed class MainForm : Form
         var m = e.Manager;
         return category switch
         {
-            "downloading" => !m.Complete && e.Saved.Running, "queued" => e.WaitingReason == "Em fila", "seeding" => m.State == TorrentState.Seeding,
+            "downloading" => !m.Complete && e.Saved.Running, "queued" => e.WaitingReason == "Queued", "seeding" => m.State == TorrentState.Seeding,
             "completed" => m.Complete, "active" => m.Monitor.DownloadRate > 0 || m.Monitor.UploadRate > 0,
             "inactive" => m.Monitor.DownloadRate == 0 && m.Monitor.UploadRate == 0,
             "unlabelled" => string.IsNullOrEmpty(e.Saved.Label),
@@ -276,12 +276,12 @@ public sealed class MainForm : Form
         categories.EndUpdate();
         var rssParent = categories.Nodes["rss"]!;
         var subscriptions = runtime.Rss.Feeds;
-        rssParent.Text = $"Feeds RSS ({subscriptions.Count})";
+        rssParent.Text = $"RSS feeds ({subscriptions.Count})";
         foreach (var feed in subscriptions)
         {
             var keyName = "feed:" + feed.Id;
             var node = rssParent.Nodes[keyName];
-            if (node is null) rssParent.Nodes.Add(new TreeNode(feed.Name) { Name = keyName });
+            if (node is null) { rssParent.Nodes.Add(new TreeNode(feed.Name) { Name = keyName }); rssParent.Expand(); }
             else node.Text = feed.Name;
         }
         foreach (TreeNode node in rssParent.Nodes.Cast<TreeNode>().Where(n => !subscriptions.Any(f => "feed:" + f.Id == n.Name)).ToArray()) node.Remove();
@@ -301,11 +301,11 @@ public sealed class MainForm : Form
         foreach (DataGridViewRow row in torrents.Rows)
         {
             var entry = (TorrentEntry)row.Tag!; var m = entry.Manager;
-            row.SetValues(entry.Saved.QueueOrder, m.Name, m.HasMetadata ? Display.Bytes(m.Torrent!.Size) : "—", m.Progress, entry.Status + (entry.Saved.ForceStarted ? " (forçado)" : ""), m.Peers.Seeds, m.Peers.Leechs, Display.Rate(m.Monitor.DownloadRate), Display.Rate(m.Monitor.UploadRate), Eta(m), entry.ShareRatio.ToString("0.000", CultureInfo.CurrentCulture), entry.Saved.Label);
+            row.SetValues(entry.Saved.QueueOrder, m.Name, m.HasMetadata ? Display.Bytes(m.Torrent!.Size) : "—", m.Progress, entry.Status + (entry.Saved.ForceStarted ? " (forced)" : ""), m.Peers.Seeds, m.Peers.Leechs, Display.Rate(m.Monitor.DownloadRate), Display.Rate(m.Monitor.UploadRate), Eta(m), entry.ShareRatio.ToString("0.000", CultureInfo.CurrentCulture), entry.Saved.Label);
             if (rebuild) row.Selected = selected.Contains(entry.Id);
         }
         foreach (DataGridViewColumn column in torrents.Columns) column.HeaderCell.SortGlyphDirection = column.Index == sortColumn ? (descending ? SortOrder.Descending : SortOrder.Ascending) : SortOrder.None;
-        networkStatus.Text = $"DHT : {service.Engine.Dht.NodeCount} nós     |     {all.Count} torrents" + (service.Preferences.Scheduler.Enabled ? "     |     Agendador: " + SchedulerSettings.Name(service.CurrentSchedule) : "");
+        networkStatus.Text = $"DHT : {service.Engine.Dht.NodeCount} nodes     |     {all.Count} torrents" + (service.Preferences.Scheduler.Enabled ? "     |     Scheduler: " + SchedulerSettings.Name(service.CurrentSchedule) : "");
         downStatus.Text = " ↓ " + Display.Rate(service.Engine.TotalDownloadRate) + "   ";
         upStatus.Text = " ↑ " + Display.Rate(service.Engine.TotalUploadRate) + "   ";
         torrents.Invalidate();
@@ -331,7 +331,7 @@ public sealed class MainForm : Form
         try
         {
             graph.Add(service.Engine.TotalDownloadRate, service.Engine.TotalUploadRate);
-            if (service.Preferences.Theme == "Sistema" && Palette.For("Sistema").Dark != palette.Dark) ApplyTheme();
+            if (service.Preferences.Theme == "System" && Palette.For("System").Dark != palette.Dark) ApplyTheme();
             RefreshRows(); await RefreshDetailsAsync();
             if (rssPanel.Visible) rssPanel.RefreshSnapshot();
         }
@@ -355,14 +355,14 @@ public sealed class MainForm : Form
         else
         {
             var m = entry.Manager;
-            var data = new Dictionary<string, string> { ["Nome"] = m.Name, ["Estado"] = entry.Status, ["Tamanho"] = m.Torrent is null ? "—" : Display.Bytes(m.Torrent.Size), ["Concluído"] = $"{m.Progress:0.00}%", ["Recebido"] = Display.Bytes(entry.Downloaded), ["Enviado"] = Display.Bytes(entry.Uploaded), ["Download"] = Display.Rate(m.Monitor.DownloadRate), ["Upload"] = Display.Rate(m.Monitor.UploadRate), ["Seeds"] = m.Peers.Seeds.ToString(), ["Peers"] = m.OpenConnections.ToString(), ["Adicionado"] = entry.Saved.AddedUtc.ToLocalTime().ToString("g"), ["Rácio"] = entry.ShareRatio.ToString("0.000"), ["Guardar em"] = m.SavePath, ["Hash"] = entry.Id };
+            var data = new Dictionary<string, string> { ["Name"] = m.Name, ["Status"] = entry.Status, ["Size"] = m.Torrent is null ? "—" : Display.Bytes(m.Torrent.Size), ["Done"] = $"{m.Progress:0.00}%", ["Downloaded"] = Display.Bytes(entry.Downloaded), ["Uploaded"] = Display.Bytes(entry.Uploaded), ["Download"] = Display.Rate(m.Monitor.DownloadRate), ["Upload"] = Display.Rate(m.Monitor.UploadRate), ["Seeds"] = m.Peers.Seeds.ToString(), ["Peers"] = m.OpenConnections.ToString(), ["Added"] = entry.Saved.AddedUtc.ToLocalTime().ToString("g"), ["Ratio"] = entry.ShareRatio.ToString("0.000"), ["Save in"] = m.SavePath, ["Hash"] = entry.Id };
             foreach (var pair in data) values[pair.Key].Text = pair.Value;
             if (details.SelectedIndex == 1)
             {
                 trackers.Rows.Clear();
-                trackers.Rows.Add("[DHT]", m.CanUseDht ? "Ativo" : "Desativado", "—");
-                trackers.Rows.Add("[Descoberta local]", m.CanUseLocalPeerDiscovery ? "Ativa" : "Desativada", "—");
-                trackers.Rows.Add("[Troca de peers]", m.Settings.AllowPeerExchange && m.Torrent?.IsPrivate != true ? "Ativa" : "Desativada", "—");
+                trackers.Rows.Add("[DHT]", m.CanUseDht ? "Enabled" : "Disabled", "—");
+                trackers.Rows.Add("[Local peer discovery]", m.CanUseLocalPeerDiscovery ? "Enabled" : "Disabled", "—");
+                trackers.Rows.Add("[Peer exchange]", m.Settings.AllowPeerExchange && m.Torrent?.IsPrivate != true ? "Enabled" : "Disabled", "—");
                 foreach (var tier in m.TrackerManager.Tiers)
                     foreach (var tracker in tier.Trackers)
                     {
@@ -416,7 +416,7 @@ public sealed class MainForm : Form
     async Task SelectedOperation(Func<TorrentEntry, Task> action) { foreach (var entry in SelectedEntries) await action(entry); }
     async Task ChooseTorrentAsync()
     {
-        using var dialog = new OpenFileDialog { Filter = "Ficheiros torrent (*.torrent)|*.torrent", Multiselect = true };
+        using var dialog = new OpenFileDialog { Filter = "Torrent files (*.torrent)|*.torrent", Multiselect = true };
         if (dialog.ShowDialog(this) == DialogResult.OK) foreach (var path in dialog.FileNames) await AddSourceAsync(path);
     }
     public async Task AddSourceAsync(string source)
@@ -433,13 +433,13 @@ public sealed class MainForm : Form
     {
         var selected = SelectedEntries;
         if (selected.Length == 0) return;
-        if (MessageBox.Show(this, $"Remover {selected.Length} torrent(s) da lista?\n\nOs ficheiros transferidos serão mantidos no disco.", "Remover torrent", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+        if (MessageBox.Show(this, $"Remove {selected.Length} torrent(s) from the list?\n\nDownloaded files will be kept on disk.", "Remove torrent", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             foreach (var entry in selected) await service.RemoveAsync(entry);
     }
     async Task SetLabelAsync()
     {
         if (Selected is not { } entry) return;
-        var label = DialogLayout.Prompt(this, "Etiqueta", "Nome da etiqueta:", entry.Saved.Label, palette);
+        var label = DialogLayout.Prompt(this, "Label", "Label name:", entry.Saved.Label, palette);
         if (label is not null) foreach (var item in SelectedEntries) await service.SetLabelAsync(item, label);
     }
     async Task AnnounceAsync()
@@ -473,23 +473,23 @@ public sealed class MainForm : Form
     }
     async Task CreateTorrentAsync()
     {
-        var kind = MessageBox.Show(this, "Criar um torrent a partir de uma pasta?\n\nSim: escolher uma pasta.\nNão: escolher um ficheiro.", "Criar torrent", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+        var kind = MessageBox.Show(this, "Create a torrent from a folder?\n\nYes: select a folder.\nNo: select a file.", "Create torrent", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
         string source;
         if (kind == DialogResult.Yes) { using var folder = new FolderBrowserDialog(); if (folder.ShowDialog(this) != DialogResult.OK) return; source = folder.SelectedPath; }
         else if (kind == DialogResult.No) { using var file = new OpenFileDialog(); if (file.ShowDialog(this) != DialogResult.OK) return; source = file.FileName; }
         else return;
-        var announce = DialogLayout.Prompt(this, "Criar torrent", "Tracker (opcional):", "", palette);
+        var announce = DialogLayout.Prompt(this, "Create torrent", "Tracker (optional):", "", palette);
         if (announce is null) return;
-        if (announce.Length > 0 && (!Uri.TryCreate(announce, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http" or "udp"))) throw new ArgumentException("O endereço do tracker deve começar por https://, http:// ou udp://.");
-        using var save = new SaveFileDialog { Filter = "Ficheiros torrent|*.torrent", FileName = Path.GetFileName(source) + ".torrent" };
+        if (announce.Length > 0 && (!Uri.TryCreate(announce, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http" or "udp"))) throw new ArgumentException("The tracker URL must begin with https://, http:// or udp://.");
+        using var save = new SaveFileDialog { Filter = "Torrent files|*.torrent", FileName = Path.GetFileName(source) + ".torrent" };
         if (save.ShowDialog(this) != DialogResult.OK) return;
         UseWaitCursor = true; toolbar.Enabled = menu.Enabled = false;
         try
         {
-            var creator = new TorrentCreator { CreatedBy = "Torrent Classic 1.0", PieceLength = 256 * 1024 };
+            var creator = new TorrentCreator { CreatedBy = "Torrent Classic 1.1", PieceLength = 256 * 1024 };
             if (announce.Length > 0) creator.Announces.Add(new List<string> { announce });
             await creator.CreateAsync(new TorrentFileSource(source), save.FileName);
-            MessageBox.Show(this, "Torrent criado em:\n" + save.FileName + "\n\nAdiciona-o à lista e escolhe a pasta onde estão os ficheiros originais para começar a partilhar.", "Criar torrent");
+            MessageBox.Show(this, "Torrent created at:\n" + save.FileName + "\n\nAdd it to the list and select the folder containing the original files to start seeding.", "Create torrent");
         }
         finally { UseWaitCursor = false; toolbar.Enabled = menu.Enabled = true; }
     }
@@ -511,9 +511,9 @@ public sealed class MainForm : Form
         if (service.Preferences.CloseToTray && !exitRequested && e.CloseReason == CloseReason.UserClosing) { tray.Visible = true; Hide(); return; }
         if (shutdown) return;
         shutdown = true; timer.Stop(); Enabled = false; tray.Visible = false;
-        Text = "Torrent Classic — A guardar a sessão…";
+        Text = "Torrent Classic — Saving the session…";
         try { await runtime.DisposeAsync(); }
-        catch (Exception error) { MessageBox.Show(this, "Não foi possível guardar toda a sessão: " + error.Message, "Torrent Classic"); }
+        catch (Exception error) { MessageBox.Show(this, "Could not save the complete session: " + error.Message, "Torrent Classic"); }
         finally { tray.Dispose(); timer.Dispose(); trulyClosed = true; Close(); }
     }
 }
