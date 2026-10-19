@@ -64,7 +64,7 @@ try
         var source = Path.Combine(sourceFolder, "payload.bin");
         var bytes = new byte[1024 * 1024]; new Random(42).NextBytes(bytes); await File.WriteAllBytesAsync(source, bytes);
         var torrentPath = Path.Combine(root, "test.torrent");
-        var creator = new TorrentCreator { PieceLength = 16384, CreatedBy = "Torrent Classic integration test" };
+        var creator = new TorrentCreator { PieceLength = 16384, CreatedBy = "NanoTorrent integration test" };
         await creator.CreateAsync(new TorrentFileSource(source), torrentPath);
         var seedPort = FreePort();
         await using var seed = new TorrentService(Path.Combine(root, "seed", "Data"), Offline(seedPort));

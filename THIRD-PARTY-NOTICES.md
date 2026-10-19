@@ -1,6 +1,6 @@
 # Third-party notices
 
-Torrent Classic application source: MIT, copyright © 2026 André Pereira and contributors. Original application icon and toolbar glyphs were drawn for this project.
+NanoTorrent application source: MIT, copyright © 2026 André Pereira and contributors. The penguin-with-magnet artwork was generated specifically for this project with an image-generation tool; the prompt and icon conversion steps are recorded in docs/icons/README.md. Toolbar glyphs are drawn in application code.
 
 | Distributed dependency | Version | License text |
 | --- | --- | --- |

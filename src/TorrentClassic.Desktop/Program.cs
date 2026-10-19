@@ -24,6 +24,11 @@ internal static class Program
     internal static bool TestRun => Smoke || StartupTest;
     internal static bool WorkspaceRecovered;
     internal static bool Headless => Smoke && Arguments[0] == "--smoke-test";
+    internal static WindowIcon LoadIcon()
+    {
+        using var stream = typeof(Program).Assembly.GetManifestResourceStream("TorrentClassic.Desktop.app-icon.png")!;
+        return new WindowIcon(stream);
+    }
     internal static string PortableDirectory
     {
         get
@@ -72,7 +77,7 @@ internal static class Program
     }
     internal static string? RecordError(Exception error) => StartupDiagnostics.Write(error,
         TestRun ? Arguments[1] : Path.Combine(PortableDirectory, "Data"),
-        Path.Combine(Path.GetTempPath(), "TorrentClassic", "Diagnostics"));
+        Path.Combine(Path.GetTempPath(), "NanoTorrent", "Diagnostics"));
     internal static void ReportTestFailure(Exception error)
     {
         Environment.ExitCode = 1;
@@ -102,7 +107,7 @@ internal static class Program
 
 public sealed class DesktopApp : Application
 {
-    public DesktopApp() { Name = "Torrent Classic"; }
+    public DesktopApp() { Name = "NanoTorrent"; }
     public override void Initialize()
     {
         Styles.Add(new SimpleTheme());
@@ -115,7 +120,7 @@ public sealed class DesktopApp : Application
             try
             {
                 var root = Program.Smoke
-                    ? Path.Combine(Path.GetTempPath(), "TorrentClassic-Desktop-Smoke-" + Guid.NewGuid().ToString("N"))
+                    ? Path.Combine(Path.GetTempPath(), "NanoTorrent-Desktop-Smoke-" + Guid.NewGuid().ToString("N"), "Data")
                     : PortableWorkspace.Prepare(Program.PortableDirectory);
                 desktop.MainWindow = CreateMainWindow(root);
             }

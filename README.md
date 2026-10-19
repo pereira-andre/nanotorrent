@@ -1,4 +1,6 @@
-# Torrent Classic
+# NanoTorrent
+
+![NanoTorrent penguin holding a magnet](docs/icon.png)
 
 A **free, portable, open-source BitTorrent client for Windows, macOS and Linux**, inspired by the layout of µTorrent Classic. No ads, subscriptions, accounts, telemetry or embedded browser. The desktop app, remote panel and documentation are in English, with light, dark and system themes.
 
@@ -6,23 +8,25 @@ An independent C# implementation using [MonoTorrent](https://github.com/alanmcgo
 
 ## Download and run
 
-Download the appropriate archive from [Releases](https://github.com/pereira-andre/torrent-classic/releases/latest) and **extract the complete folder to a writable location**. The .NET runtime is included; no .NET installation or app installer is needed.
+Download the appropriate archive from [Releases](https://github.com/pereira-andre/nanotorrent/releases/latest) and **extract the complete folder to a writable location**. The .NET runtime is included; no .NET installation or app installer is needed.
 
 | System | Package | Run |
 | --- | --- | --- |
-| Windows 10/11, x64 | `TorrentClassic-win-x64-portable.zip` | `TorrentClassic.exe` |
-| macOS 14+, Apple Silicon | `TorrentClassic-osx-arm64-portable.zip` | `Torrent Classic.app` |
-| macOS 14+, Intel | `TorrentClassic-osx-x64-portable.zip` | `Torrent Classic.app` |
-| Linux, x64 | `TorrentClassic-linux-x64-portable.tar.gz` | `./TorrentClassic.sh` |
-| Linux, ARM64 | `TorrentClassic-linux-arm64-portable.tar.gz` | `./TorrentClassic.sh` |
+| Windows 10/11, x64 | `NanoTorrent-win-x64-portable.zip` | `NanoTorrent.exe` |
+| macOS 14+, Apple Silicon | `NanoTorrent-osx-arm64-portable.zip` | `NanoTorrent.app` |
+| macOS 14+, Intel | `NanoTorrent-osx-x64-portable.zip` | `NanoTorrent.app` |
+| Linux, x64 | `NanoTorrent-linux-x64-portable.tar.gz` | `./NanoTorrent.sh` |
+| Linux, ARM64 | `NanoTorrent-linux-arm64-portable.tar.gz` | `./NanoTorrent.sh` |
 
-On macOS, move the extracted **TorrentClassic folder** to a writable location such as your home folder before opening the app. Keep the `.app` inside it: portable data lives beside the bundle. Mac packages have an ad-hoc signature, **not an Apple Developer ID signature or notarization**. macOS may require approval in System Settings → Privacy & Security. Windows builds are unsigned and may also show an operating-system warning.
+On macOS, move the extracted **NanoTorrent folder** to a writable location such as your home folder before opening the app. Keep the `.app` inside it: portable data lives beside the bundle. Mac packages have an ad-hoc signature, **not an Apple Developer ID signature or notarization**. macOS may require approval in System Settings → Privacy & Security. Windows builds are unsigned and may also show an operating-system warning.
 
-If macOS launches the app from a temporary read-only location, or the app folder is protected, Torrent Classic now opens a **Choose portable folder** window instead of crashing. Select the extracted TorrentClassic folder (the one containing `Data`, if you already have a session), or another writable folder. All settings and new downloads stay inside that selected folder. The selection is not stored elsewhere; this dialog may reappear while launching from a read-only location. **Preferences → General** shows the active portable data folder. Moving the complete extracted folder to a writable location in Finder keeps the usual portable startup behavior.
+If macOS launches the app from a temporary read-only location, or the app folder is protected, NanoTorrent now opens a **Choose portable folder** window instead of crashing. Select the extracted NanoTorrent folder (the one containing `Data`, if you already have a session), or another writable folder. Session data stays inside that selected folder. A new session uses its Downloads folder; existing settings and download folders are preserved. The selection is not stored elsewhere; this dialog may reappear while launching from a read-only location. **Preferences → General** shows the active portable data folder. Moving the complete extracted folder to a writable location in Finder keeps the usual portable startup behavior.
 
 Linux packages target glibc systems with an X11 desktop or XWayland, such as Ubuntu 24.04+. Standard system libraries are required: X11, ICE/SM, fontconfig, ICU, OpenSSL and libstdc++. Minimal distributions may need these installed through their package manager. Alpine/musl and headless servers are not targeted. macOS and Linux use a matching classic layout; operating-system controls differ from the Windows Forms version.
 
 The included runtime makes these packages larger than the original µTorrent. Builds are self-contained and untrimmed for compatibility; they are not designed to match its binary size or memory footprint.
+
+NanoTorrent was previously released as Torrent Classic. Existing portable `Data` and `Downloads` folders remain compatible; the repository and application now use the new name.
 
 ## Portable data and updates
 
@@ -119,7 +123,7 @@ The queue/scheduler tick every 2 seconds. RSS checks due feeds every 30 seconds 
 
 ## Licenses and inspiration
 
-Original app code and icons use the [MIT license](LICENSE). Project releases are free. MIT also allows third parties to reuse the code under its terms.
+App code and project artwork use the [MIT license](LICENSE). Project releases are free. MIT also allows third parties to reuse the code under its terms.
 
 MonoTorrent 3.0.2, Mono.Nat, ReusableTasks and Avalonia retain their original licenses. The MonoTorrent client assembly includes a documented fix for paused/disposed I/O blocking other transfers; see [the source snapshot and local changes](vendor/MonoTorrent.Client/README.md). Other MonoTorrent assemblies are unchanged NuGet binaries. No proprietary client is decompiled.
 

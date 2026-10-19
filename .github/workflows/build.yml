@@ -39,7 +39,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path artifacts/screenshots -Force | Out-Null
           $destination = (Resolve-Path artifacts/screenshots).Path
-          $process = Start-Process artifacts/win-x64/TorrentClassic.exe -ArgumentList @('--smoke-test', $destination) -PassThru
+          $process = Start-Process artifacts/win-x64/NanoTorrent.exe -ArgumentList @('--smoke-test', $destination) -PassThru
           if (-not $process.WaitForExit(90000)) { $process.Kill(); throw 'UI smoke test timed out' }
           if ($process.ExitCode -ne 0) { throw "UI smoke test failed: $($process.ExitCode)" }
           if (-not (Test-Path artifacts/screenshots/result.txt)) { throw 'UI smoke test did not finish' }
@@ -52,8 +52,8 @@ jobs:
         with:
           name: portable-windows-x64
           path: |
-            artifacts/TorrentClassic-win-x64-portable.zip
-            artifacts/TorrentClassic-win-x64-portable.zip.sha256
+            artifacts/NanoTorrent-win-x64-portable.zip
+            artifacts/NanoTorrent-win-x64-portable.zip.sha256
   portable-desktop:
     strategy:
       fail-fast: false
@@ -83,7 +83,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           mkdir -p artifacts/screenshots
-          'artifacts/${{ matrix.rid }}/TorrentClassic/Torrent Classic.app/Contents/MacOS/TorrentClassic.Desktop' --smoke-test "$PWD/artifacts/screenshots"
+          'artifacts/${{ matrix.rid }}/NanoTorrent/NanoTorrent.app/Contents/MacOS/NanoTorrent' --smoke-test "$PWD/artifacts/screenshots"
           test -f artifacts/screenshots/result.txt
       - name: Verify native Mac startup and read-only-volume recovery
         if: runner.os == 'macOS'
@@ -97,7 +97,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           mkdir -p artifacts/screenshots
-          xvfb-run -a artifacts/${{ matrix.rid }}/TorrentClassic/TorrentClassic.Desktop --native-smoke-test "$PWD/artifacts/screenshots"
+          xvfb-run -a artifacts/${{ matrix.rid }}/NanoTorrent/NanoTorrent --native-smoke-test "$PWD/artifacts/screenshots"
           test -f artifacts/screenshots/result.txt
       - uses: actions/upload-artifact@v4
         if: always()
@@ -108,4 +108,4 @@ jobs:
         with:
           name: portable-${{ matrix.rid }}
           path: |
-            artifacts/TorrentClassic-${{ matrix.rid }}-portable.*
+            artifacts/NanoTorrent-${{ matrix.rid }}-portable.*

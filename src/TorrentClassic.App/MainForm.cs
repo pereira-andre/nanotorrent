@@ -31,7 +31,7 @@ public sealed class MainForm : Form
     readonly TextBox log = new() { Dock = DockStyle.Fill, ReadOnly = true, Multiline = true, ScrollBars = ScrollBars.Both, BorderStyle = BorderStyle.None, WordWrap = false };
     readonly Dictionary<string, Label> values = [];
     readonly System.Windows.Forms.Timer timer = new() { Interval = 1000 };
-    readonly NotifyIcon tray = new() { Text = "Torrent Classic" };
+    readonly NotifyIcon tray = new() { Text = "NanoTorrent" };
     readonly ToolStripMenuItem themeMenu = new("Appearance");
     readonly TaskCompletionSource ready = new();
     readonly Queue<string> pendingSources = new();
@@ -59,7 +59,7 @@ public sealed class MainForm : Form
         rssPanel = new RssPanel(runtime);
         rssPanel.FeedsChanged += RefreshRows;
         palette = Palette.For(service.Preferences.Theme);
-        Text = "Torrent Classic";
+        Text = "NanoTorrent";
         Font = new Font("Segoe UI", 9);
         AutoScaleDimensions = new SizeF(96, 96);
         AutoScaleMode = AutoScaleMode.Dpi;
@@ -103,7 +103,7 @@ public sealed class MainForm : Form
         Controls.Add(outer); Controls.Add(toolbar); Controls.Add(menu); Controls.Add(status);
         tray.Icon = Icon;
         var trayMenu = new ContextMenuStrip();
-        trayMenu.Items.Add("Show Torrent Classic", null, (_, _) => ShowWindow());
+        trayMenu.Items.Add("Show NanoTorrent", null, (_, _) => ShowWindow());
         trayMenu.Items.Add("Start all", null, (_, _) => _ = Run(async () => { foreach (var entry in service.Entries) await service.StartAsync(entry); }));
         trayMenu.Items.Add("Pause all", null, (_, _) => _ = Run(async () => { foreach (var entry in service.Entries) await service.PauseAsync(entry); }));
         trayMenu.Items.Add(new ToolStripSeparator());
@@ -160,9 +160,9 @@ public sealed class MainForm : Form
         view.DropDownItems.Add(Item("Select all", () => { torrents.SelectAll(); return Task.CompletedTask; }, Keys.Control | Keys.A));
         view.DropDownItems.Add(Item("Search", () => { search.Focus(); return Task.CompletedTask; }, Keys.Control | Keys.F));
         var help = new ToolStripMenuItem("&Help");
-        help.DropDownItems.Add(Item("About Torrent Classic", () =>
+        help.DropDownItems.Add(Item("About NanoTorrent", () =>
         {
-            MessageBox.Show(this, "Torrent Classic 1.1.1\n\nFree and open-source BitTorrent client.\nInterface inspired by µTorrent Classic.\nIndependent project, not affiliated with µTorrent or Rainberry.\n\nApplication code: MIT license.\nBitTorrent engine: MonoTorrent (MIT), with a local I/O fix.\nFull licenses are included in the distribution.\n\nNo ads, telemetry or subscriptions.", "About", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "NanoTorrent 1.1.1\n\nFree and open-source BitTorrent client.\nInterface inspired by µTorrent Classic.\nIndependent project, not affiliated with µTorrent or Rainberry.\n\nApplication code: MIT license.\nBitTorrent engine: MonoTorrent (MIT), with a local I/O fix.\nFull licenses are included in the distribution.\n\nNo ads, telemetry or subscriptions.", "About", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return Task.CompletedTask;
         }));
         menu.Items.AddRange([file, options, view, help]);
@@ -412,7 +412,7 @@ public sealed class MainForm : Form
             if (pendingSources.Count > 0 && !shutdown) BeginInvoke(() => HandleArguments([]));
         }
     }
-    void ShowError(Exception e) { service.Log(e.ToString()); if (!shutdown) MessageBox.Show(this, e.Message, "Torrent Classic", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+    void ShowError(Exception e) { service.Log(e.ToString()); if (!shutdown) MessageBox.Show(this, e.Message, "NanoTorrent", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
     async Task SelectedOperation(Func<TorrentEntry, Task> action) { foreach (var entry in SelectedEntries) await action(entry); }
     async Task ChooseTorrentAsync()
     {
@@ -486,7 +486,7 @@ public sealed class MainForm : Form
         UseWaitCursor = true; toolbar.Enabled = menu.Enabled = false;
         try
         {
-            var creator = new TorrentCreator { CreatedBy = "Torrent Classic 1.1", PieceLength = 256 * 1024 };
+            var creator = new TorrentCreator { CreatedBy = "NanoTorrent 1.1", PieceLength = 256 * 1024 };
             if (announce.Length > 0) creator.Announces.Add(new List<string> { announce });
             await creator.CreateAsync(new TorrentFileSource(source), save.FileName);
             MessageBox.Show(this, "Torrent created at:\n" + save.FileName + "\n\nAdd it to the list and select the folder containing the original files to start seeding.", "Create torrent");
@@ -511,9 +511,9 @@ public sealed class MainForm : Form
         if (service.Preferences.CloseToTray && !exitRequested && e.CloseReason == CloseReason.UserClosing) { tray.Visible = true; Hide(); return; }
         if (shutdown) return;
         shutdown = true; timer.Stop(); Enabled = false; tray.Visible = false;
-        Text = "Torrent Classic — Saving the session…";
+        Text = "NanoTorrent — Saving the session…";
         try { await runtime.DisposeAsync(); }
-        catch (Exception error) { MessageBox.Show(this, "Could not save the complete session: " + error.Message, "Torrent Classic"); }
+        catch (Exception error) { MessageBox.Show(this, "Could not save the complete session: " + error.Message, "NanoTorrent"); }
         finally { tray.Dispose(); timer.Dispose(); trulyClosed = true; Close(); }
     }
 }

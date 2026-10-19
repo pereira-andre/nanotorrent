@@ -72,12 +72,15 @@ public sealed class RemoteControlServer(TorrentService service, RssService rss) 
             using var reader = new StreamReader(stream); return reader.ReadToEnd();
         }
         var html = Resource("index.html"); var js = Resource("app.js"); var css = Resource("style.css");
+        using var iconStream = typeof(RemoteControlServer).Assembly.GetManifestResourceStream("TorrentClassic.Core.Remote.icon.png")!;
+        using var iconBuffer = new MemoryStream(); iconStream.CopyTo(iconBuffer); var icon = iconBuffer.ToArray();
         app.MapGet("/", () => Results.Content(html, "text/html; charset=utf-8"));
+        app.MapGet("/icon.png", () => Results.File(icon, "image/png"));
         app.MapGet("/app.js", () => Results.Content(js, "text/javascript; charset=utf-8"));
         app.MapGet("/style.css", () => Results.Content(css, "text/css; charset=utf-8"));
         app.MapGet("/api/status", () => Results.Json(new
         {
-            version = "1.1.0", downloadRate = service.Engine.TotalDownloadRate, uploadRate = service.Engine.TotalUploadRate,
+            version = "1.1.1", downloadRate = service.Engine.TotalDownloadRate, uploadRate = service.Engine.TotalUploadRate,
             schedule = SchedulerSettings.Name(service.CurrentSchedule),
             downloadLimitKiB = service.Preferences.DownloadLimitKiB, uploadLimitKiB = service.Preferences.UploadLimitKiB,
             torrents = service.Entries.OrderBy(e => e.Saved.QueueOrder).Select(e => new { id = e.Id, name = e.Manager.Name, size = e.Manager.Torrent?.Size, progress = e.Manager.Progress, status = e.Status, desired = e.Saved.Running, forced = e.Saved.ForceStarted, order = e.Saved.QueueOrder, downloadRate = e.Manager.Monitor.DownloadRate, uploadRate = e.Manager.Monitor.UploadRate, downloaded = e.Downloaded, uploaded = e.Uploaded, ratio = e.ShareRatio })

@@ -8,7 +8,7 @@ Copy-Item LICENSE,README.md,THIRD-PARTY-NOTICES.md $output
 Copy-Item licenses $output -Recurse -Force
 Copy-Item vendor/MonoTorrent.Client/README.md (Join-Path $output "licenses/MonoTorrent-LOCAL-CHANGES.md")
 $packageCache = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path ([Environment]::GetFolderPath("UserProfile")) ".nuget/packages" }
-$config = Get-Content "src/TorrentClassic.App/bin/Release/net10.0-windows/$Runtime/TorrentClassic.runtimeconfig.json" -Raw | ConvertFrom-Json
+$config = Get-Content "src/TorrentClassic.App/bin/Release/net10.0-windows/$Runtime/NanoTorrent.runtimeconfig.json" -Raw | ConvertFrom-Json
 foreach ($framework in $config.runtimeOptions.includedFrameworks) {
     $package = $framework.name.ToLowerInvariant() + ".runtime." + $Runtime
     $packagePath = Join-Path $packageCache "$package/$($framework.version)"
@@ -16,7 +16,7 @@ foreach ($framework in $config.runtimeOptions.includedFrameworks) {
         Copy-Item $file.FullName (Join-Path $output "licenses/$($framework.name)-$($file.Name)")
     }
 }
-$zip = "artifacts/TorrentClassic-$Runtime-portable.zip"
+$zip = "artifacts/NanoTorrent-$Runtime-portable.zip"
 if (Test-Path $zip) { Remove-Item $zip }
 Compress-Archive -Path "$output/*" -DestinationPath $zip -CompressionLevel Optimal
 $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()

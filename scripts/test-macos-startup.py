@@ -10,10 +10,10 @@ ROOT = Path(__file__).resolve().parent.parent
 parser = argparse.ArgumentParser()
 parser.add_argument('runtime', choices=['osx-arm64', 'osx-x64'])
 args = parser.parse_args()
-archive = ROOT / 'artifacts' / f'TorrentClassic-{args.runtime}-portable.zip'
+archive = ROOT / 'artifacts' / f'NanoTorrent-{args.runtime}-portable.zip'
 output = ROOT / 'artifacts' / f'startup-{args.runtime}'
 output.mkdir(parents=True, exist_ok=True)
-relative_exe = Path('Torrent Classic.app/Contents/MacOS/TorrentClassic.Desktop')
+relative_exe = Path('NanoTorrent.app/Contents/MacOS/NanoTorrent')
 
 
 def launch(name, executable, expected_folder, restored, recovery=None):
@@ -43,16 +43,16 @@ def launch(name, executable, expected_folder, restored, recovery=None):
     print(f'PASS {name}: native window, expected data folder and saved session', flush=True)
 
 
-with tempfile.TemporaryDirectory(prefix='TorrentClassic-Startup-') as temporary:
+with tempfile.TemporaryDirectory(prefix='NanoTorrent-Startup-') as temporary:
     work = Path(temporary).resolve()
     # Verify the distributed ZIP, including its signed resources, rather than the build output.
     subprocess.run(['ditto', '-x', '-k', str(archive), str(work / 'extracted')], check=True)
-    portable = work / 'extracted/TorrentClassic'
-    subprocess.run(['codesign', '--verify', '--deep', '--strict', str(portable / 'Torrent Classic.app')], check=True)
+    portable = work / 'extracted/NanoTorrent'
+    subprocess.run(['codesign', '--verify', '--deep', '--strict', str(portable / 'NanoTorrent.app')], check=True)
     launch('writable-first', portable / relative_exe, portable, 0)
     launch('writable-restart', portable / relative_exe, portable, 1)
     image = work / 'read-only.dmg'
-    subprocess.run(['hdiutil', 'create', '-quiet', '-srcfolder', str(portable), '-volname', 'TorrentClassic Startup Test', '-format', 'UDRO', '-o', str(image)], check=True)
+    subprocess.run(['hdiutil', 'create', '-quiet', '-srcfolder', str(portable), '-volname', 'NanoTorrent Startup Test', '-format', 'UDRO', '-o', str(image)], check=True)
     mount = work / 'read-only-volume'
     mount.mkdir()
     subprocess.run(['hdiutil', 'attach', '-quiet', '-readonly', '-nobrowse', '-mountpoint', str(mount), str(image)], check=True)

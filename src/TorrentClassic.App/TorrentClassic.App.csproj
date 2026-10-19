@@ -4,11 +4,11 @@
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
-    <AssemblyName>TorrentClassic</AssemblyName>
+    <AssemblyName>NanoTorrent</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>app.ico</ApplicationIcon>
     <Version>1.1.1</Version>
-    <Product>Torrent Classic</Product>
+    <Product>NanoTorrent</Product>
     <Description>Portable, ad-free classic BitTorrent client</Description>
     <DebugType>embedded</DebugType>
   </PropertyGroup>

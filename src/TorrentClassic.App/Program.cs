@@ -27,14 +27,14 @@ internal static class Program
                 writer.WriteLine(JsonSerializer.Serialize(args));
                 return 0;
             }
-            catch { MessageBox.Show("Torrent Classic is already running. Wait a few seconds and try again.", "Torrent Classic"); return 1; }
+            catch { MessageBox.Show("NanoTorrent is already running. Wait a few seconds and try again.", "NanoTorrent"); return 1; }
         }
         var root = smoke ? Path.Combine(Path.GetTempPath(), "TorrentClassic-Smoke-" + Guid.NewGuid().ToString("N")) : Path.Combine(AppContext.BaseDirectory, "Data");
         Application.ThreadException += (_, e) =>
         {
             File.AppendAllText(Path.Combine(root, "errors.log"), DateTime.Now + " " + e.Exception + Environment.NewLine);
             if (smoke) { Directory.CreateDirectory(args[1]); File.WriteAllText(Path.Combine(args[1], "failure.txt"), e.Exception.ToString()); Environment.Exit(1); }
-            MessageBox.Show(e.Exception.Message, "Torrent Classic", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(e.Exception.Message, "NanoTorrent", MessageBoxButtons.OK, MessageBoxIcon.Error);
         };
         try
         {
@@ -70,7 +70,7 @@ internal static class Program
         catch (Exception e)
         {
             try { File.WriteAllText(Path.Combine(smoke ? args[1] : root, "startup-error.log"), e.ToString()); } catch (IOException) { } catch (UnauthorizedAccessException) { }
-            if (!smoke) MessageBox.Show("Could not start Torrent Classic.\n\n" + e.Message + "\n\nExtract the app to a writable folder, such as your Desktop or a USB drive.", "Torrent Classic", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (!smoke) MessageBox.Show("Could not start NanoTorrent.\n\n" + e.Message + "\n\nExtract the app to a writable folder, such as your Desktop or a USB drive.", "NanoTorrent", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
     }
@@ -110,8 +110,8 @@ internal static class Program
         foreach (var name in new[] { "Example Linux distribution.iso", "Example photographs.zip", "Free documentation.pdf" })
         {
             var source = Path.Combine(root, name);
-            await File.WriteAllBytesAsync(source, System.Text.Encoding.UTF8.GetBytes("Torrent Classic · " + name));
-            var creator = new TorrentCreator { CreatedBy = "Torrent Classic smoke test", PieceLength = 16384 };
+            await File.WriteAllBytesAsync(source, System.Text.Encoding.UTF8.GetBytes("NanoTorrent · " + name));
+            var creator = new TorrentCreator { CreatedBy = "NanoTorrent smoke test", PieceLength = 16384 };
             var torrent = source + ".torrent";
             await creator.CreateAsync(new TorrentFileSource(source), torrent);
             var entry = await form.Service.AddAsync(torrent, root, false);

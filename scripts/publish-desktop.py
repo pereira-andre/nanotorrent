@@ -22,11 +22,11 @@ mac = rid.startswith('osx-')
 if mac and sys.platform != 'darwin':
     parser.error('Create and ad-hoc sign macOS bundles on macOS.')
 artifacts = ROOT / 'artifacts'
-package = artifacts / rid / 'TorrentClassic'
+package = artifacts / rid / 'NanoTorrent'
 if package.exists():
     shutil.rmtree(package)
 package.mkdir(parents=True)
-bundle = package / 'Torrent Classic.app'
+bundle = package / 'NanoTorrent.app'
 publish = bundle / 'Contents' / 'MacOS' if mac else package
 publish.mkdir(parents=True, exist_ok=True)
 env = dict(os.environ, AVALONIA_TELEMETRY_OPTOUT='1', DOTNET_CLI_TELEMETRY_OPTOUT='1')
@@ -52,7 +52,7 @@ for name, lib in sorted(assets['libraries'].items()):
         if path.is_file() and any(x in path.name.lower() for x in ['license', 'licence', 'notice', 'copying']):
             target = license_dir / (name.replace('/', '-') + '-' + str(path.relative_to(folder)).replace('/', '-'))
             shutil.copy2(path, target)
-config = json.loads((publish / 'TorrentClassic.Desktop.runtimeconfig.json').read_text())
+config = json.loads((publish / 'NanoTorrent.runtimeconfig.json').read_text())
 for framework in config['runtimeOptions']['includedFrameworks']:
     folder = cache / (framework['name'].lower() + '.runtime.' + rid) / framework['version']
     found = []
@@ -62,14 +62,14 @@ for framework in config['runtimeOptions']['includedFrameworks']:
     if not found:
         raise RuntimeError('Missing runtime notices for ' + framework['name'])
 (license_dir / 'PACKAGE-MANIFEST.md').write_text('\n'.join(manifest) + '\n')
-exe = publish / 'TorrentClassic.Desktop'
+exe = publish / 'NanoTorrent'
 exe.chmod(0o755)
 if mac:
     resources = bundle / 'Contents/Resources'
     resources.mkdir()
-    shutil.copy2(ROOT / 'docs/TorrentClassic.icns', resources / 'TorrentClassic.icns')
+    shutil.copy2(ROOT / 'docs/NanoTorrent.icns', resources / 'NanoTorrent.icns')
     version = ET.parse(ROOT / 'src/TorrentClassic.Desktop/TorrentClassic.Desktop.csproj').getroot().findtext('.//Version')
-    info = dict(CFBundleName='Torrent Classic', CFBundleDisplayName='Torrent Classic', CFBundleIdentifier='org.torrentclassic.desktop', CFBundleExecutable='TorrentClassic.Desktop', CFBundlePackageType='APPL', CFBundleShortVersionString=version, CFBundleVersion=version, CFBundleIconFile='TorrentClassic', LSMinimumSystemVersion='14.0', NSHighResolutionCapable=True)
+    info = dict(CFBundleName='NanoTorrent', CFBundleDisplayName='NanoTorrent', CFBundleIdentifier='org.nanotorrent.desktop', CFBundleExecutable='NanoTorrent', CFBundlePackageType='APPL', CFBundleShortVersionString=version, CFBundleVersion=version, CFBundleIconFile='NanoTorrent', LSMinimumSystemVersion='14.0', NSHighResolutionCapable=True)
     (bundle / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
     # macOS treats files in MacOS/ as nested code too. Sign each file first.
     # This is ad-hoc, not Developer ID/notarization.
@@ -78,17 +78,17 @@ if mac:
             subprocess.run(['codesign', '--force', '--sign', '-', '--timestamp=none', str(path)], check=True, capture_output=True)
     subprocess.run(['codesign', '--force', '--sign', '-', '--timestamp=none', str(bundle)], check=True)
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(bundle)], check=True)
-    archive = artifacts / f'TorrentClassic-{rid}-portable.zip'
+    archive = artifacts / f'NanoTorrent-{rid}-portable.zip'
     if archive.exists(): archive.unlink()
     subprocess.run(['ditto', '-c', '-k', '--keepParent', str(package), str(archive)], check=True)
 else:
-    launcher = package / 'TorrentClassic.sh'
-    launcher.write_text('#!/bin/sh\nset -eu\nAPP_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec "$APP_DIR/TorrentClassic.Desktop" "$@"\n')
+    launcher = package / 'NanoTorrent.sh'
+    launcher.write_text('#!/bin/sh\nset -eu\nAPP_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)\nexec "$APP_DIR/NanoTorrent" "$@"\n')
     launcher.chmod(0o755)
-    shutil.copy2(ROOT / 'docs/icon.png', package / 'TorrentClassic.png')
-    archive = artifacts / f'TorrentClassic-{rid}-portable.tar.gz'
+    shutil.copy2(ROOT / 'docs/icon.png', package / 'NanoTorrent.png')
+    archive = artifacts / f'NanoTorrent-{rid}-portable.tar.gz'
     with tarfile.open(archive, 'w:gz') as tar:
-        tar.add(package, arcname='TorrentClassic')
+        tar.add(package, arcname='NanoTorrent')
 digest = hashlib.file_digest(archive.open('rb'), 'sha256').hexdigest()
 Path(str(archive) + '.sha256').write_text(f'{digest}  {archive.name}\n')
 print(f'Portable package: {archive} ({archive.stat().st_size / 1024 / 1024:.1f} MiB)')

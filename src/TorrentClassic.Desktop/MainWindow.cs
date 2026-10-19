@@ -74,12 +74,12 @@ internal sealed class MainWindow : Window
     public MainWindow(ClientRuntime runtime)
     {
         this.runtime = runtime; rss = new RssView(this, runtime);
-        Title = "Torrent Classic"; Width = 1240; Height = 800; MinWidth = 1000; MinHeight = 660;
+        Title = "NanoTorrent"; Icon = Program.LoadIcon(); Width = 1240; Height = 800; MinWidth = 1000; MinHeight = 660;
         var root = new DockPanel();
         var menu = new Menu { ItemsSource = new[] {
             Menu("File", Menu("Add torrent…", PickAsync), Menu("Add magnet link…", () => AddAsync("")), Menu("Create torrent from file…", () => CreateAsync(false)), Menu("Create torrent from folder…", () => CreateAsync(true)), Menu("Exit", () => { Close(); return Task.CompletedTask; })),
             Menu("Options", Menu("Preferences…", PreferencesAsync), Menu("Appearance", Menu("System", () => ThemeAsync("System")), Menu("Light", () => ThemeAsync("Light")), Menu("Dark", () => ThemeAsync("Dark"))), Menu("Open remote control", OpenRemoteAsync)),
-            Menu("Help", Menu("Project on GitHub", () => OpenAsync("https://github.com/pereira-andre/torrent-classic")), Menu("About", () => Ui.Ask(this, "About Torrent Classic", "Torrent Classic 1.1.1\nFree, portable and ad-free. MIT licensed.\nAn independent client inspired by classic BitTorrent interfaces.\nBuilt with MonoTorrent, Avalonia and .NET.\n\nSee LICENSE and THIRD-PARTY-NOTICES.md in the app folder."))) } };
+            Menu("Help", Menu("Project on GitHub", () => OpenAsync("https://github.com/pereira-andre/nanotorrent")), Menu("About", () => Ui.Ask(this, "About NanoTorrent", "NanoTorrent 1.1.1\nFree, portable and ad-free. MIT licensed.\nAn independent client inspired by classic BitTorrent interfaces.\nBuilt with MonoTorrent, Avalonia and .NET.\n\nSee LICENSE and THIRD-PARTY-NOTICES.md in the app folder."))) } };
         DockPanel.SetDock(menu, Dock.Top); root.Children.Add(menu);
         var tools = new DockPanel { Margin = new Thickness(4) }; search.Width = 205; search.Margin = new Thickness(8, 2); DockPanel.SetDock(search, Dock.Right); tools.Children.Add(search);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal };
@@ -104,7 +104,7 @@ internal sealed class MainWindow : Window
             if (action is not null) { e.Handled = true; await Run(action); }
         };
         Opened += async (_, _) => { await Run(async () => { await Service.RestoreAsync(); if (Program.Smoke) await SmokeAsync(); else if (Program.StartupTest) await StartupTestAsync(); else { await runtime.StartAsync(); timer.Start(); } }); ready = true; if (!Program.TestRun) HandleArguments(Program.Arguments); };
-        Closing += async (_, e) => { if (disposed) return; e.Cancel = true; if (closing) return; closing = true; timer.Stop(); IsEnabled = false; Title = "Torrent Classic — Saving the session…"; try { await runtime.DisposeAsync(); } catch (Exception ex) { await Ui.Ask(this, "Save error", ex.Message); } finally { disposed = true; Close(); } };
+        Closing += async (_, e) => { if (disposed) return; e.Cancel = true; if (closing) return; closing = true; timer.Stop(); IsEnabled = false; Title = "NanoTorrent — Saving the session…"; try { await runtime.DisposeAsync(); } catch (Exception ex) { await Ui.Ask(this, "Save error", ex.Message); } finally { disposed = true; Close(); } };
     }
     MenuItem Menu(string title, Func<Task> action) { var item = new MenuItem { Header = title }; item.Click += async (_, _) => await Run(action); return item; }
     static MenuItem Menu(string title, params MenuItem[] children) => new() { Header = title, ItemsSource = children };
@@ -116,7 +116,7 @@ internal sealed class MainWindow : Window
         {
             Service.Log(e.Message);
             if (Program.TestRun) { Program.ReportTestFailure(e); Close(); }
-            else await Ui.Ask(this, "Torrent Classic", e.Message);
+            else await Ui.Ask(this, "NanoTorrent", e.Message);
         }
         finally { busy = false; await RefreshAsync(); if (ready && pendingArguments.Count > 0 && !closing) _ = Run(DrainArgumentsAsync); }
     }
@@ -192,7 +192,7 @@ internal sealed class MainWindow : Window
         var tracker = await Ui.Prompt(this, "Tracker URL (optional)", ""); if (tracker is null) return;
         if (tracker.Length > 0 && (!Uri.TryCreate(tracker, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https" or "udp"))) throw new ArgumentException("Enter an HTTP, HTTPS or UDP tracker URL.");
         var output = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { Title = "Save torrent", SuggestedFileName = Path.GetFileName(source) + ".torrent", DefaultExtension = "torrent" }); var path = output?.TryGetLocalPath(); if (path is null) return;
-        var creator = new TorrentCreator { CreatedBy = "Torrent Classic 1.1", PieceLength = 256 * 1024 }; if (tracker.Length > 0) creator.Announces.Add([tracker]);
+        var creator = new TorrentCreator { CreatedBy = "NanoTorrent 1.1", PieceLength = 256 * 1024 }; if (tracker.Length > 0) creator.Announces.Add([tracker]);
         status.Text = "Creating torrent…"; await creator.CreateAsync(new TorrentFileSource(source), path); await Ui.Ask(this, "Create torrent", "Torrent created at:\n" + path + "\n\nAdd it with the folder containing the original files to start seeding.");
     }
     async Task StartupTestAsync()
@@ -224,7 +224,7 @@ internal sealed class MainWindow : Window
             for (int i = 0; i < 3; i++)
             {
                 var folder = Path.Combine(Service.DataDirectory, "fixture" + i); Directory.CreateDirectory(folder); await File.WriteAllBytesAsync(Path.Combine(folder, "Sample " + i + ".txt"), new byte[1024 * (i + 1)]);
-                var file = Path.Combine(Service.DataDirectory, $"sample{i}.torrent"); await new TorrentCreator { CreatedBy = "Torrent Classic UI test", PieceLength = 16384 }.CreateAsync(new TorrentFileSource(folder), file);
+                var file = Path.Combine(Service.DataDirectory, $"sample{i}.torrent"); await new TorrentCreator { CreatedBy = "NanoTorrent UI test", PieceLength = 16384 }.CreateAsync(new TorrentFileSource(folder), file);
                 var entry = await Service.AddAsync(file, folder, false); await Service.SetLabelAsync(entry, i == 0 ? "Linux" : "Samples");
             }
             await runtime.Rss.SaveFeedAsync(new RssFeed { Name = "Linux releases", Url = "https://example.org/releases.xml", Enabled = false, Include = "*stable*", AutoDownload = true });

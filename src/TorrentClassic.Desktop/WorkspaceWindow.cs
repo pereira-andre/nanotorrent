@@ -19,7 +19,8 @@ internal sealed class WorkspaceWindow : Window
     internal WorkspaceWindow(Exception reason, Func<string, Task> open)
     {
         this.open = open;
-        Title = "Torrent Classic — Choose a portable folder";
+        Title = "NanoTorrent — Choose a portable folder";
+        Icon = Program.LoadIcon();
         Width = 730; Height = 450; MinWidth = 660; MinHeight = 400;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         location.IsReadOnly = true; location.Text = Program.PortableDirectory;
@@ -30,10 +31,10 @@ internal sealed class WorkspaceWindow : Window
         });
         var body = Ui.Stack(
             new TextBlock { Text = "Choose where to keep your portable data", FontSize = 20, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
-            new TextBlock { Text = "Torrent Classic could not write beside the app. " + (OperatingSystem.IsMacOS() ? "macOS may run a downloaded app from a temporary read-only location. A disk image or protected folder can cause the same problem." : "The app folder may be read-only or protected."), TextWrapping = TextWrapping.Wrap },
-            new TextBlock { Text = "Select the extracted TorrentClassic folder, or another writable folder. Your session stays in Data; a new session uses Downloads inside the selected folder. To resume an existing session, select the folder containing its Data folder. Existing settings and download folders are preserved.", TextWrapping = TextWrapping.Wrap },
+            new TextBlock { Text = "NanoTorrent could not write beside the app. " + (OperatingSystem.IsMacOS() ? "macOS may run a downloaded app from a temporary read-only location. A disk image or protected folder can cause the same problem." : "The app folder may be read-only or protected."), TextWrapping = TextWrapping.Wrap },
+            new TextBlock { Text = "Select the extracted NanoTorrent folder, or another writable folder. Your session stays in Data; a new session uses Downloads inside the selected folder. To resume an existing session, select the folder containing its Data folder. Existing settings and download folders are preserved.", TextWrapping = TextWrapping.Wrap },
             Ui.Field("Current app folder:", location), error, diagnostics,
-            new TextBlock { Text = "For fully portable use, move the complete TorrentClassic folder to a writable location" + (OperatingSystem.IsMacOS() ? " in Finder" : "") + " and open the app there. This dialog may appear again while the app runs from a read-only location.", FontSize = 12, TextWrapping = TextWrapping.Wrap });
+            new TextBlock { Text = "For fully portable use, move the complete NanoTorrent folder to a writable location" + (OperatingSystem.IsMacOS() ? " in Finder" : "") + " and open the app there. This dialog may appear again while the app runs from a read-only location.", FontSize = 12, TextWrapping = TextWrapping.Wrap });
         var root = new DockPanel { Margin = new Thickness(20) };
         var buttons = Ui.Buttons(Ui.Button("Quit", () => { Close(); return Task.CompletedTask; }), choose);
         DockPanel.SetDock(buttons, Dock.Bottom); root.Children.Add(buttons); root.Children.Add(new ScrollViewer { Content = body }); Content = root;

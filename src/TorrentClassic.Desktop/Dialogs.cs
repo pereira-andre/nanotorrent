@@ -108,7 +108,7 @@ internal sealed class PreferencesWindow : Window
     public PreferencesWindow(Preferences preferences, string? dataDirectory = null)
     {
         original = preferences; hours = [.. preferences.Scheduler.Hours];
-        Title = "Preferences — Torrent Classic"; Width = 820; Height = 600; MinWidth = 820; MinHeight = 600; CanResize = false; WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        Title = "Preferences — NanoTorrent"; Width = 820; Height = 600; MinWidth = 820; MinHeight = 600; CanResize = false; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         theme = new ComboBox { ItemsSource = new[] { "System", "Light", "Dark" }, SelectedItem = preferences.Theme, Width = 170 };
         destination = Ui.Text(preferences.DownloadDirectory);
         port = Ui.Number(preferences.Port, 65535); connections = Ui.Number(preferences.MaximumConnections, 5000, 5); down = Ui.Number(preferences.DownloadLimitKiB); up = Ui.Number(preferences.UploadLimitKiB);

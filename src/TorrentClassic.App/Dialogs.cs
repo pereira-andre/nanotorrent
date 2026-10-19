@@ -64,7 +64,7 @@ public sealed class PreferencesDialog : Form
         queue = new QueueEditor(preferences.Queue);
         scheduler = new ScheduleEditor(preferences.Scheduler);
         remote = new RemoteEditor(preferences.Remote);
-        Text = "Preferences — Torrent Classic";
+        Text = "Preferences — NanoTorrent";
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = MinimizeBox = false;

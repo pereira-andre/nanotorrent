@@ -80,7 +80,7 @@ public static class FeedParser
 public static class TorrentImporter
 {
     public const int MaximumBytes = 4 * 1024 * 1024;
-    public static HttpClient CreateClient() => new(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All }) { Timeout = TimeSpan.FromSeconds(20), DefaultRequestHeaders = { { "User-Agent", "TorrentClassic/1.1" } } };
+    public static HttpClient CreateClient() => new(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All }) { Timeout = TimeSpan.FromSeconds(20), DefaultRequestHeaders = { { "User-Agent", "NanoTorrent/1.1" } } };
     public static Uri ValidateHttpUrl(string url) => Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http" ? uri : throw new ArgumentException("The URL must begin with https:// or http://.");
     public static async Task<byte[]> ReadBoundedAsync(Stream stream, CancellationToken token)
     {
