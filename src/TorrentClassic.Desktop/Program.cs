@@ -20,6 +20,9 @@ internal static class Program
     internal static Task ListenTask = Task.CompletedTask;
     internal static string[] Arguments = [];
     internal static bool Smoke => Arguments.Length == 2 && Arguments[0] is "--smoke-test" or "--native-smoke-test";
+    internal static bool StartupTest => Arguments.Length >= 2 && Arguments[0] == "--startup-smoke-test";
+    internal static bool TestRun => Smoke || StartupTest;
+    internal static bool WorkspaceRecovered;
     internal static bool Headless => Smoke && Arguments[0] == "--smoke-test";
     internal static string PortableDirectory
     {
@@ -35,30 +38,45 @@ internal static class Program
     public static int Main(string[] args)
     {
         Arguments = args;
-        using var mutex = new Mutex(true, InstanceName, out var first);
-        if (!first && !Smoke)
+        Mutex? mutex = null;
+        try
         {
-            try
+            mutex = new Mutex(true, InstanceName, out var first);
+            if (!first && !TestRun)
             {
                 using var pipe = new NamedPipeClientStream(".", InstanceName, PipeDirection.Out, PipeOptions.CurrentUserOnly);
                 pipe.Connect(3000);
                 using var writer = new StreamWriter(pipe) { AutoFlush = true };
                 writer.WriteLine(JsonSerializer.Serialize(args)); return 0;
             }
-            catch { Console.Error.WriteLine("Torrent Classic is already running. Wait a few seconds and try again."); return 1; }
+            CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("en-GB");
+            CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("en-GB");
+            AppDomain.CurrentDomain.UnhandledException += (_, e) => { if (e.ExceptionObject is Exception error) RecordError(error); };
+            var builder = AppBuilder.Configure<DesktopApp>();
+            builder = Headless ? builder.UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }) : builder.UsePlatformDetect();
+            var result = builder.StartWithClassicDesktopLifetime(args, ShutdownMode.OnMainWindowClose);
+            return Environment.ExitCode == 0 ? result : Environment.ExitCode;
         }
-        CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("en-GB");
-        CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("en-GB");
-        var builder = AppBuilder.Configure<DesktopApp>();
-        builder = Headless ? builder.UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }) : builder.UsePlatformDetect();
-        try { var result = builder.StartWithClassicDesktopLifetime(args, ShutdownMode.OnMainWindowClose); return Environment.ExitCode == 0 ? result : Environment.ExitCode; }
         catch (Exception error)
         {
-            var folder = Smoke ? args[1] : PortableDirectory;
-            Directory.CreateDirectory(folder); File.WriteAllText(Path.Combine(folder, "startup-error.log"), error.ToString());
+            RecordError(error);
+            if (TestRun) ReportTestFailure(error);
             Console.Error.WriteLine(error); return 1;
         }
-        finally { lifetime.Cancel(); ListenTask.GetAwaiter().GetResult(); }
+        finally
+        {
+            lifetime.Cancel();
+            try { ListenTask.GetAwaiter().GetResult(); } catch (Exception error) { RecordError(error); }
+            mutex?.Dispose();
+        }
+    }
+    internal static string? RecordError(Exception error) => StartupDiagnostics.Write(error,
+        TestRun ? Arguments[1] : Path.Combine(PortableDirectory, "Data"),
+        Path.Combine(Path.GetTempPath(), "TorrentClassic", "Diagnostics"));
+    internal static void ReportTestFailure(Exception error)
+    {
+        Environment.ExitCode = 1;
+        StartupDiagnostics.Write(error, Arguments[1]);
     }
     internal static async Task ListenAsync(MainWindow window)
     {
@@ -94,13 +112,35 @@ public sealed class DesktopApp : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var root = Program.Smoke ? Path.Combine(Path.GetTempPath(), "TorrentClassic-Desktop-Smoke-" + Guid.NewGuid().ToString("N")) : Path.Combine(Program.PortableDirectory, "Data");
-            var preferences = Program.Smoke ? new Preferences { Port = 0, EnableDht = false, EnablePeerExchange = false, EnableLocalDiscovery = false, EnablePortForwarding = false, DownloadDirectory = Path.Combine(root, "Downloads") } : null;
-            var runtime = new ClientRuntime(new TorrentService(root, preferences));
-            var window = new MainWindow(runtime); desktop.MainWindow = window;
-            if (!Program.Smoke) Program.ListenTask = Program.ListenAsync(window);
-            RequestedThemeVariant = runtime.Service.Preferences.Theme switch { "Dark" => ThemeVariant.Dark, "Light" => ThemeVariant.Light, _ => ThemeVariant.Default };
+            try
+            {
+                var root = Program.Smoke
+                    ? Path.Combine(Path.GetTempPath(), "TorrentClassic-Desktop-Smoke-" + Guid.NewGuid().ToString("N"))
+                    : PortableWorkspace.Prepare(Program.PortableDirectory);
+                desktop.MainWindow = CreateMainWindow(root);
+            }
+            catch (Exception reason)
+            {
+                desktop.MainWindow = new WorkspaceWindow(reason, data =>
+                {
+                    var window = CreateMainWindow(data);
+                    Program.WorkspaceRecovered = true;
+                    desktop.MainWindow = window;
+                    window.Show();
+                    return Task.CompletedTask;
+                });
+            }
         }
         base.OnFrameworkInitializationCompleted();
     }
+    static MainWindow CreateMainWindow(string root)
+    {
+        var preferences = Program.TestRun ? new Preferences { Port = 0, EnableDht = false, EnablePeerExchange = false, EnableLocalDiscovery = false, EnablePortForwarding = false, DownloadDirectory = Path.Combine(Path.GetDirectoryName(root)!, "Downloads") } : null;
+        var runtime = new ClientRuntime(new TorrentService(root, preferences));
+        var window = new MainWindow(runtime);
+        if (!Program.TestRun) Program.ListenTask = Program.ListenAsync(window);
+        if (Current is { } app) app.RequestedThemeVariant = runtime.Service.Preferences.Theme switch { "Dark" => ThemeVariant.Dark, "Light" => ThemeVariant.Light, _ => ThemeVariant.Default };
+        return window;
+    }
+
 }

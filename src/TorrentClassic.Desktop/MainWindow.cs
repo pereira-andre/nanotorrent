@@ -79,7 +79,7 @@ internal sealed class MainWindow : Window
         var menu = new Menu { ItemsSource = new[] {
             Menu("File", Menu("Add torrent…", PickAsync), Menu("Add magnet link…", () => AddAsync("")), Menu("Create torrent from file…", () => CreateAsync(false)), Menu("Create torrent from folder…", () => CreateAsync(true)), Menu("Exit", () => { Close(); return Task.CompletedTask; })),
             Menu("Options", Menu("Preferences…", PreferencesAsync), Menu("Appearance", Menu("System", () => ThemeAsync("System")), Menu("Light", () => ThemeAsync("Light")), Menu("Dark", () => ThemeAsync("Dark"))), Menu("Open remote control", OpenRemoteAsync)),
-            Menu("Help", Menu("Project on GitHub", () => OpenAsync("https://github.com/pereira-andre/torrent-classic")), Menu("About", () => Ui.Ask(this, "About Torrent Classic", "Torrent Classic 1.1.0\nFree, portable and ad-free. MIT licensed.\nAn independent client inspired by classic BitTorrent interfaces.\nBuilt with MonoTorrent, Avalonia and .NET.\n\nSee LICENSE and THIRD-PARTY-NOTICES.md in the app folder."))) } };
+            Menu("Help", Menu("Project on GitHub", () => OpenAsync("https://github.com/pereira-andre/torrent-classic")), Menu("About", () => Ui.Ask(this, "About Torrent Classic", "Torrent Classic 1.1.1\nFree, portable and ad-free. MIT licensed.\nAn independent client inspired by classic BitTorrent interfaces.\nBuilt with MonoTorrent, Avalonia and .NET.\n\nSee LICENSE and THIRD-PARTY-NOTICES.md in the app folder."))) } };
         DockPanel.SetDock(menu, Dock.Top); root.Children.Add(menu);
         var tools = new DockPanel { Margin = new Thickness(4) }; search.Width = 205; search.Margin = new Thickness(8, 2); DockPanel.SetDock(search, Dock.Right); tools.Children.Add(search);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal };
@@ -103,7 +103,7 @@ internal sealed class MainWindow : Window
             Func<Task>? action = command ? e.Key switch { Key.O => PickAsync, Key.U => () => AddAsync(""), Key.P => PreferencesAsync, _ => null } : null;
             if (action is not null) { e.Handled = true; await Run(action); }
         };
-        Opened += async (_, _) => { await Run(async () => { await Service.RestoreAsync(); if (Program.Smoke) await SmokeAsync(); else { await runtime.StartAsync(); timer.Start(); } }); ready = true; if (!Program.Smoke) HandleArguments(Program.Arguments); };
+        Opened += async (_, _) => { await Run(async () => { await Service.RestoreAsync(); if (Program.Smoke) await SmokeAsync(); else if (Program.StartupTest) await StartupTestAsync(); else { await runtime.StartAsync(); timer.Start(); } }); ready = true; if (!Program.TestRun) HandleArguments(Program.Arguments); };
         Closing += async (_, e) => { if (disposed) return; e.Cancel = true; if (closing) return; closing = true; timer.Stop(); IsEnabled = false; Title = "Torrent Classic — Saving the session…"; try { await runtime.DisposeAsync(); } catch (Exception ex) { await Ui.Ask(this, "Save error", ex.Message); } finally { disposed = true; Close(); } };
     }
     MenuItem Menu(string title, Func<Task> action) { var item = new MenuItem { Header = title }; item.Click += async (_, _) => await Run(action); return item; }
@@ -115,7 +115,7 @@ internal sealed class MainWindow : Window
         try { await action(); } catch (Exception e)
         {
             Service.Log(e.Message);
-            if (Program.Smoke) { Directory.CreateDirectory(Program.Arguments[1]); await File.WriteAllTextAsync(Path.Combine(Program.Arguments[1], "error.txt"), e.ToString()); Environment.ExitCode = 1; Close(); }
+            if (Program.TestRun) { Program.ReportTestFailure(e); Close(); }
             else await Ui.Ask(this, "Torrent Classic", e.Message);
         }
         finally { busy = false; await RefreshAsync(); if (ready && pendingArguments.Count > 0 && !closing) _ = Run(DrainArgumentsAsync); }
@@ -135,7 +135,7 @@ internal sealed class MainWindow : Window
     }
     async Task RemoveAsync() { if (Selected is { } e && await Ui.Ask(this, "Remove torrent", $"Remove {e.Manager.Name} from the list?\nDownloaded files will be kept.", true)) await Service.RemoveAsync(e); }
     async Task LabelAsync() { if (Selected is { } e && await Ui.Prompt(this, "Set label", e.Saved.Label) is { } label) await Service.SetLabelAsync(e, label); }
-    async Task PreferencesAsync() { var dialog = new PreferencesWindow(Service.Preferences); if (await dialog.ShowDialog<Preferences?>(this) is { } p) { await runtime.ApplyPreferencesAsync(p); ApplyTheme(p.Theme); } }
+    async Task PreferencesAsync() { var dialog = new PreferencesWindow(Service.Preferences, Service.DataDirectory); if (await dialog.ShowDialog<Preferences?>(this) is { } p) { await runtime.ApplyPreferencesAsync(p); ApplyTheme(p.Theme); } }
     async Task ThemeAsync(string theme) { await runtime.ApplyPreferencesAsync(Service.Preferences with { Theme = theme }); ApplyTheme(theme); }
     static void ApplyTheme(string theme) { if (Application.Current is { } app) app.RequestedThemeVariant = theme switch { "Dark" => ThemeVariant.Dark, "Light" => ThemeVariant.Light, _ => ThemeVariant.Default }; }
     async Task OpenRemoteAsync() { if (!Service.Preferences.Remote.Enabled) { await Ui.Ask(this, "Remote control", "Enable remote control in Preferences first, then copy the access key."); return; } await OpenAsync($"http://127.0.0.1:{Service.Preferences.Remote.Port}/"); }
@@ -195,6 +195,27 @@ internal sealed class MainWindow : Window
         var creator = new TorrentCreator { CreatedBy = "Torrent Classic 1.1", PieceLength = 256 * 1024 }; if (tracker.Length > 0) creator.Announces.Add([tracker]);
         status.Text = "Creating torrent…"; await creator.CreateAsync(new TorrentFileSource(source), path); await Ui.Ask(this, "Create torrent", "Torrent created at:\n" + path + "\n\nAdd it with the folder containing the original files to start seeding.");
     }
+    async Task StartupTestAsync()
+    {
+        var output = Path.GetFullPath(Program.Arguments[1]); Directory.CreateDirectory(output);
+        var restored = Service.Entries.Count;
+        await runtime.StartAsync();
+        if (restored == 0)
+        {
+            var payload = Path.Combine(Service.DataDirectory, "startup-fixture.txt");
+            await File.WriteAllTextAsync(payload, "Portable startup regression fixture");
+            var torrent = payload + ".torrent";
+            await new TorrentCreator { PieceLength = 16384 }.CreateAsync(new TorrentFileSource(payload), torrent);
+            var entry = await Service.AddAsync(torrent, Service.Preferences.DownloadDirectory, false);
+            await Service.SetLabelAsync(entry, "Startup regression");
+        }
+        else if (restored != 1 || Service.Entries.Single().Saved.Label != "Startup regression")
+            throw new InvalidOperationException("The portable startup fixture was not restored intact.");
+        await runtime.ApplyPreferencesAsync(Service.Preferences with { Theme = "Dark" }); ApplyTheme("Dark");
+        await RefreshAsync(); await Capture(this, Path.Combine(output, "startup-main.png"));
+        await File.WriteAllTextAsync(Path.Combine(output, "result.json"), System.Text.Json.JsonSerializer.Serialize(new { dataDirectory = Service.DataDirectory, restoredEntries = restored, recovered = Program.WorkspaceRecovered }));
+        Close();
+    }
     async Task SmokeAsync()
     {
         var output = Path.GetFullPath(Program.Arguments[1]); Directory.CreateDirectory(output);
@@ -221,7 +242,7 @@ internal sealed class MainWindow : Window
         catch (Exception e) { await File.WriteAllTextAsync(Path.Combine(output, "error.txt"), e.ToString()); Environment.ExitCode = 1; }
         finally { Close(); }
     }
-    static async Task Capture(Window window, string path)
+    internal static async Task Capture(Window window, string path)
     {
         await Task.Delay(180); window.UpdateLayout();
         if (Program.Headless) window.CaptureRenderedFrame()?.Save(path, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);

@@ -162,7 +162,7 @@ public sealed class MainForm : Form
         var help = new ToolStripMenuItem("&Help");
         help.DropDownItems.Add(Item("About Torrent Classic", () =>
         {
-            MessageBox.Show(this, "Torrent Classic 1.1.0\n\nFree and open-source BitTorrent client.\nInterface inspired by µTorrent Classic.\nIndependent project, not affiliated with µTorrent or Rainberry.\n\nApplication code: MIT license.\nBitTorrent engine: MonoTorrent (MIT), with a local I/O fix.\nFull licenses are included in the distribution.\n\nNo ads, telemetry or subscriptions.", "About", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "Torrent Classic 1.1.1\n\nFree and open-source BitTorrent client.\nInterface inspired by µTorrent Classic.\nIndependent project, not affiliated with µTorrent or Rainberry.\n\nApplication code: MIT license.\nBitTorrent engine: MonoTorrent (MIT), with a local I/O fix.\nFull licenses are included in the distribution.\n\nNo ads, telemetry or subscriptions.", "About", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return Task.CompletedTask;
         }));
         menu.Items.AddRange([file, options, view, help]);

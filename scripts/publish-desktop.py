@@ -68,7 +68,8 @@ if mac:
     resources = bundle / 'Contents/Resources'
     resources.mkdir()
     shutil.copy2(ROOT / 'docs/TorrentClassic.icns', resources / 'TorrentClassic.icns')
-    info = dict(CFBundleName='Torrent Classic', CFBundleDisplayName='Torrent Classic', CFBundleIdentifier='org.torrentclassic.desktop', CFBundleExecutable='TorrentClassic.Desktop', CFBundlePackageType='APPL', CFBundleShortVersionString='1.1.0', CFBundleVersion='1.1.0', CFBundleIconFile='TorrentClassic', LSMinimumSystemVersion='14.0', NSHighResolutionCapable=True)
+    version = ET.parse(ROOT / 'src/TorrentClassic.Desktop/TorrentClassic.Desktop.csproj').getroot().findtext('.//Version')
+    info = dict(CFBundleName='Torrent Classic', CFBundleDisplayName='Torrent Classic', CFBundleIdentifier='org.torrentclassic.desktop', CFBundleExecutable='TorrentClassic.Desktop', CFBundlePackageType='APPL', CFBundleShortVersionString=version, CFBundleVersion=version, CFBundleIconFile='TorrentClassic', LSMinimumSystemVersion='14.0', NSHighResolutionCapable=True)
     (bundle / 'Contents/Info.plist').write_bytes(plistlib.dumps(info))
     # macOS treats files in MacOS/ as nested code too. Sign each file first.
     # This is ad-hoc, not Developer ID/notarization.

@@ -50,9 +50,9 @@ internal static class Ui
         dialog = Dialog(title, new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(4, 12) }, confirm ? Buttons(no, yes) : Buttons(yes), 530, 235);
         return await dialog.ShowDialog<bool>(owner);
     }
-    public static async Task<string?> PickFolder(Window owner)
+    public static async Task<string?> PickFolder(Window owner, string title = "Choose download folder")
     {
-        var folders = await owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = "Choose download folder", AllowMultiple = false });
+        var folders = await owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { Title = title, AllowMultiple = false });
         return folders.FirstOrDefault()?.TryGetLocalPath();
     }
     public static async Task<string[]> PickTorrents(Window owner)
@@ -105,7 +105,7 @@ internal sealed class PreferencesWindow : Window
         Scheduler = new SchedulerSettings { Enabled = schedule.IsChecked == true, Hours = [.. hours], DownloadLimitKiB = (int)(limitedDown.Value ?? 128), UploadLimitKiB = (int)(limitedUp.Value ?? 32) },
         Remote = new RemoteSettings { Enabled = remote.IsChecked == true, AllowLan = lan.IsChecked == true, Port = (int)(remotePort.Value ?? 8080), Token = token.Text ?? "" }
     };
-    public PreferencesWindow(Preferences preferences)
+    public PreferencesWindow(Preferences preferences, string? dataDirectory = null)
     {
         original = preferences; hours = [.. preferences.Scheduler.Hours];
         Title = "Preferences — Torrent Classic"; Width = 820; Height = 600; MinWidth = 820; MinHeight = 600; CanResize = false; WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -116,7 +116,8 @@ internal sealed class PreferencesWindow : Window
         queue = Ui.Check("Enable automatic queue", preferences.Queue.Enabled); active = Ui.Number(preferences.Queue.MaximumActive, 1000, 1); downloads = Ui.Number(preferences.Queue.MaximumDownloads, 1000, 1); ratio = Ui.Number((decimal)preferences.Queue.SeedRatio, 10000); ratio.Increment = 0.1m; minutes = Ui.Number(preferences.Queue.SeedMinutes);
         schedule = Ui.Check("Enable weekly scheduler", preferences.Scheduler.Enabled); limitedDown = Ui.Number(preferences.Scheduler.DownloadLimitKiB, 1000000, 1); limitedUp = Ui.Number(preferences.Scheduler.UploadLimitKiB, 1000000, 1);
         remote = Ui.Check("Enable remote control", preferences.Remote.Enabled); lan = Ui.Check("Allow other devices on the local network / VPN", preferences.Remote.AllowLan); remotePort = Ui.Number(preferences.Remote.Port, 65535, 1024); token = Ui.Text(preferences.Remote.Token.Length > 0 ? preferences.Remote.Token : RemoteSettings.NewToken()); token.PasswordChar = '•'; token.IsReadOnly = true;
-        AddTab("General", Ui.Stack(Ui.Field("Appearance:", theme), Ui.Field("Download folder:", destination, Ui.Button("…", async () => { var path = await Ui.PickFolder(this); if (path is not null) destination.Text = path; })), Note("All app data stays in the portable Data folder.\nKeep the app running for RSS, scheduling and remote access.")));
+        var dataPath = Ui.Text(dataDirectory ?? Path.Combine(Program.PortableDirectory, "Data")); dataPath.IsReadOnly = true;
+        AddTab("General", Ui.Stack(Ui.Field("Appearance:", theme), Ui.Field("Download folder:", destination, Ui.Button("…", async () => { var path = await Ui.PickFolder(this); if (path is not null) destination.Text = path; })), Ui.Field("Portable data folder:", dataPath), Note("All app data stays in the portable Data folder.\nKeep the app running for RSS, scheduling and remote access.")));
         AddTab("Connections", Ui.Stack(Ui.Field("Port (0 = automatic):", port), Ui.Field("Maximum connections:", connections), dht, pex, lpd, forward));
         AddTab("Bandwidth", Ui.Stack(Ui.Field("Download (KiB/s):", down), Ui.Field("Upload (KiB/s):", up), Note("0 = unlimited. Global limits apply immediately.")));
         AddTab("Queue", Ui.Stack(queue, Ui.Field("Maximum active torrents:", active), Ui.Field("Maximum downloads:", downloads), Ui.Field("Stop at share ratio (0 = never):", ratio), Ui.Field("Or seeding minutes (0 = never):", minutes), Note("Queued torrents start when a slot is available. Use the toolbar arrows to reorder.\nForce start bypasses queue limits and seeding goals, but respects the scheduler.\nManually paused torrents stay paused.")));

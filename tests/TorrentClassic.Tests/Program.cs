@@ -30,6 +30,34 @@ try
         await using var migrated = new TorrentService(legacy);
         Assert(migrated.Preferences.Theme == "Dark", "Legacy theme preference was not migrated to English");
     });
+    await Test("Portable startup checks actual writes and preserves diagnostics on read-only locations", () =>
+    {
+        var folder = Path.Combine(root, "startup-portable");
+        var data = PortableWorkspace.Prepare(folder);
+        Assert(data == Path.Combine(folder, "Data") && Directory.Exists(data), "Portable workspace was not prepared");
+        Assert(!Directory.EnumerateFiles(folder, ".torrentclassic-write-test-*", SearchOption.AllDirectories).Any(), "Write probes were left behind");
+        var blocked = Path.Combine(root, "not-a-directory"); File.WriteAllText(blocked, "Existing user file");
+        AssertThrows<IOException>(() => PortableWorkspace.Prepare(blocked));
+        var exception = new IOException("Original startup failure");
+        var writableLogFolder = Path.Combine(root, "startup-diagnostics");
+        var log = StartupDiagnostics.Write(exception, blocked, writableLogFolder);
+        Assert(log is not null && File.ReadAllText(log).Contains("Original startup failure"), "Diagnostic fallback lost the original error");
+        Assert(StartupDiagnostics.Write(exception, blocked) is null, "Logging failure should be handled without throwing");
+        if (!OperatingSystem.IsWindows())
+        {
+            var readOnly = Path.Combine(root, "read-only-startup"); Directory.CreateDirectory(readOnly);
+            var mode = File.GetUnixFileMode(readOnly);
+            try
+            {
+                File.SetUnixFileMode(readOnly, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+                AssertThrows<UnauthorizedAccessException>(() => PortableWorkspace.Prepare(readOnly));
+                Assert(StartupDiagnostics.Write(exception, readOnly, writableLogFolder) == log, "Read-only logging did not fall back");
+                Assert(!Directory.Exists(Path.Combine(readOnly, "Data")), "Read-only startup left a partial workspace");
+            }
+            finally { File.SetUnixFileMode(readOnly, mode); }
+        }
+        return Task.CompletedTask;
+    });
     await Test("Real loopback transfer: magnet metadata, pause, restart, priority and SHA256", async () =>
     {
         var sourceFolder = Path.Combine(root, "source"); Directory.CreateDirectory(sourceFolder);
