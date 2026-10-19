@@ -53,7 +53,16 @@ public static class Theme
         }
         if (root is TreeView tree) SetWindowTheme(tree.Handle, p.Dark ? "DarkMode_Explorer" : "Explorer", null);
         if (root is ClassicTabs tabs) tabs.Colors = p;
+        if (root is ThemeComboBox combo) combo.Colors = p;
         if (root is SpeedGraph graph) graph.Colors = p;
+        if (root is Button button)
+        {
+            button.UseVisualStyleBackColor = false;
+            button.FlatStyle = FlatStyle.Flat;
+            button.FlatAppearance.BorderColor = p.Border;
+            button.FlatAppearance.MouseOverBackColor = p.Selection;
+        }
+        if (root is TextBoxBase text) text.BorderStyle = text.BorderStyle == BorderStyle.None ? BorderStyle.None : BorderStyle.FixedSingle;
         foreach (Control child in root.Controls) Apply(child, p);
         root.Invalidate(true);
     }

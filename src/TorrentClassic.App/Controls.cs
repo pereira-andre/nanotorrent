@@ -52,6 +52,34 @@ public sealed class ClassicTabs : TabControl
             e.Graphics.DrawLine(pen, bounds.Left + 3, bounds.Top + 1, bounds.Right - 3, bounds.Top + 1);
         }
     }
+    protected override void WndProc(ref Message m)
+    {
+        base.WndProc(ref m);
+        if (m.Msg != 0x000F || TabCount == 0) return;
+        // Native TabControl ignores BackColor for its unused header and page frame.
+        using var graphics = Graphics.FromHwnd(Handle);
+        using var brush = new SolidBrush(Colors.Background);
+        var last = GetTabRect(TabCount - 1);
+        graphics.FillRectangle(brush, last.Right + 1, 0, Math.Max(0, Width - last.Right - 1), last.Bottom + 1);
+        var page = DisplayRectangle;
+        graphics.FillRectangle(brush, 0, last.Bottom + 1, page.Left, Height - last.Bottom - 1);
+        graphics.FillRectangle(brush, page.Right, last.Bottom + 1, Math.Max(0, Width - page.Right), Height - last.Bottom - 1);
+        graphics.FillRectangle(brush, 0, page.Bottom, Width, Math.Max(0, Height - page.Bottom));
+        graphics.FillRectangle(brush, 0, last.Bottom, Width, Math.Max(0, page.Top - last.Bottom));
+    }
+}
+
+public sealed class ThemeComboBox : ComboBox
+{
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public Palette Colors { get; set; } = Palette.For("Claro");
+    public ThemeComboBox() { DrawMode = DrawMode.OwnerDrawFixed; DropDownStyle = ComboBoxStyle.DropDownList; }
+    protected override void OnDrawItem(DrawItemEventArgs e)
+    {
+        using var brush = new SolidBrush(e.State.HasFlag(DrawItemState.Selected) ? Colors.Selection : Colors.Surface);
+        e.Graphics.FillRectangle(brush, e.Bounds);
+        if (e.Index >= 0) TextRenderer.DrawText(e.Graphics, GetItemText(Items[e.Index]), Font, e.Bounds, Colors.Text, TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+    }
 }
 
 public sealed class SpeedGraph : Control

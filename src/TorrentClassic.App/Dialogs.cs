@@ -40,7 +40,7 @@ public sealed class PreferencesDialog : Form
 {
     readonly Preferences original;
     readonly TextBox destination = new() { Dock = DockStyle.Fill };
-    readonly ComboBox theme = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 190 };
+    readonly ThemeComboBox theme = new() { Width = 190 };
     readonly NumericUpDown port = Number(0, 65535);
     readonly NumericUpDown down = Number(0, 1000000);
     readonly NumericUpDown up = Number(0, 1000000);
