@@ -96,6 +96,18 @@ try
             Assert(entry.Manager.Complete, "Moved payload no longer complete");
         }
     });
+    await Test("Unavailable torrents remain recoverable after saving another session", async () =>
+    {
+        var folder = Path.Combine(root, "unavailable", "Data"); Directory.CreateDirectory(folder);
+        var missing = new SavedTorrent { Id = "missing", Source = Path.Combine(root, "absent.torrent"), SavePath = Path.Combine(root, "later") };
+        JsonStore.Save(Path.Combine(folder, "session.json"), new[] { missing });
+        await using (var client = new TorrentService(folder, Offline(0)))
+        {
+            await client.RestoreAsync();
+            Assert(client.Entries.Count == 0 && client.Messages.Any(m => m.Contains("restaurar")), "Unavailable torrent was not reported");
+        }
+        Assert(JsonStore.Load<SavedTorrent[]>(Path.Combine(folder, "session.json"), () => []).Single().Id == "missing", "Unavailable torrent was lost from saved session");
+    });
     Console.WriteLine($"PASS: {passed} integration scenarios.");
     return 0;
 }

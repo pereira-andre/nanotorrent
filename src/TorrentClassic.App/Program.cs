@@ -30,11 +30,13 @@ internal static class Program
         Application.ThreadException += (_, e) =>
         {
             File.AppendAllText(Path.Combine(root, "errors.log"), DateTime.Now + " " + e.Exception + Environment.NewLine);
+            if (smoke) { Directory.CreateDirectory(args[1]); File.WriteAllText(Path.Combine(args[1], "failure.txt"), e.Exception.ToString()); Environment.Exit(1); }
             MessageBox.Show(e.Exception.Message, "Torrent Classic", MessageBoxButtons.OK, MessageBoxIcon.Error);
         };
         try
         {
             Directory.CreateDirectory(root);
+            if (smoke) Directory.CreateDirectory(args[1]);
             var preferences = smoke ? new Preferences { EnableDht = false, EnableLocalDiscovery = false, EnablePeerExchange = false, EnablePortForwarding = false, Port = 0 } : null;
             var service = new TorrentService(root, preferences);
             using var window = new MainForm(service);
@@ -63,7 +65,7 @@ internal static class Program
         }
         catch (Exception e)
         {
-            try { File.WriteAllText(Path.Combine(root, "startup-error.log"), e.ToString()); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+            try { File.WriteAllText(Path.Combine(smoke ? args[1] : root, "startup-error.log"), e.ToString()); } catch (IOException) { } catch (UnauthorizedAccessException) { }
             if (!smoke) MessageBox.Show("Não foi possível iniciar o Torrent Classic.\n\n" + e.Message + "\n\nExtrai a aplicação para uma pasta onde possas escrever (por exemplo, o Ambiente de Trabalho ou uma pen USB).", "Torrent Classic", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
@@ -108,8 +110,10 @@ internal static class Program
             var creator = new TorrentCreator { CreatedBy = "Torrent Classic smoke test", PieceLength = 16384 };
             var torrent = source + ".torrent";
             await creator.CreateAsync(new TorrentFileSource(source), torrent);
-            await form.Service.AddAsync(torrent, Path.Combine(root, "downloads"), false);
+            var entry = await form.Service.AddAsync(torrent, root, false);
+            if (form.Service.Entries.Count == 1) await form.Service.CheckAsync(entry);
         }
+        form.SelectFirstTorrent();
         foreach (var theme in new[] { "Claro", "Escuro" })
         {
             await form.Service.SavePreferencesAsync(form.Service.Preferences with { Theme = theme });

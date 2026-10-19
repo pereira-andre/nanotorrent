@@ -9,6 +9,7 @@ public sealed class TorrentService : IAsyncDisposable
 {
     readonly SemaphoreSlim gate = new(1, 1);
     readonly List<TorrentEntry> entries = [];
+    readonly List<SavedTorrent> unrestored = [];
     readonly ConcurrentQueue<string> messages = new();
     readonly CancellationTokenSource lifetime = new();
     readonly List<Task> metadataTasks = [];
@@ -27,7 +28,7 @@ public sealed class TorrentService : IAsyncDisposable
         Preferences = preferences ?? JsonStore.Load(Path.Combine(root, "preferences.json"), () => new Preferences { DownloadDirectory = Path.Combine(Path.GetDirectoryName(root)!, "Downloads") }, Log);
         Preferences.DownloadDirectory = ExpandPath(Preferences.DownloadDirectory);
         try { Preferences.Validate(); }
-        catch (ArgumentException e) { Log("Preferências inválidas: " + e.Message); Preferences = new Preferences(); }
+        catch (ArgumentException e) { Log("Preferências inválidas: " + e.Message); Preferences = new Preferences { DownloadDirectory = Path.Combine(Path.GetDirectoryName(root)!, "Downloads") }; }
         Engine = new ClientEngine(BuildSettings(Preferences));
     }
 
@@ -68,7 +69,7 @@ public sealed class TorrentService : IAsyncDisposable
         return relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) && !Path.IsPathFullyQualified(relative) ? PortablePrefix + relative : path;
     }
     void SavePreferences() => JsonStore.Save(Path.Combine(root, "preferences.json"), Preferences with { DownloadDirectory = StorePath(Preferences.DownloadDirectory) });
-    void SaveSession() => JsonStore.Save(Path.Combine(root, "session.json"), entries.Select(e => e.Saved with { Source = StorePath(e.Saved.Source), SavePath = StorePath(e.Saved.SavePath) }).ToArray());
+    void SaveSession() => JsonStore.Save(Path.Combine(root, "session.json"), entries.Select(e => e.Saved).Concat(unrestored).Select(s => s with { Source = StorePath(s.Source), SavePath = StorePath(s.SavePath) }).ToArray());
 
     public async Task RestoreAsync()
     {
@@ -76,9 +77,9 @@ public sealed class TorrentService : IAsyncDisposable
         foreach (var item in saved)
         {
             try { item.Source = ExpandPath(item.Source); item.SavePath = ExpandPath(item.SavePath); await AddAsync(item.Source, item.SavePath, item.Running, item); }
-            catch (Exception e) { Log($"Não foi possível restaurar {item.Source}: {e.Message}"); }
+            catch (Exception e) { unrestored.Add(item); Log($"Não foi possível restaurar {item.Source}: {e.Message}"); }
         }
-        // A failed entry is retained on disk until the next explicit session mutation.
+        // Failed entries remain in the saved session so a temporarily unavailable drive can recover.
     }
 
     public async Task<TorrentEntry> AddAsync(string source, string destination, bool start, SavedTorrent? saved = null)
@@ -194,9 +195,11 @@ public sealed class TorrentService : IAsyncDisposable
         try
         {
             if (disposed) return;
-            SaveSession();
-            SavePreferences();
-            try { await Engine.StopAllAsync(TimeSpan.FromSeconds(5)); }
+            try
+            {
+                try { SaveSession(); SavePreferences(); }
+                finally { await Engine.StopAllAsync(TimeSpan.FromSeconds(5)); }
+            }
             finally { Engine.Dispose(); disposed = true; }
         }
         finally { gate.Release(); }

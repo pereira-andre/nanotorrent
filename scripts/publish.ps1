@@ -5,7 +5,7 @@ $output = Join-Path "artifacts" $Runtime
 dotnet publish src/TorrentClassic.App -c Release -r $Runtime --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=false -o $output
 if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed" }
 Copy-Item LICENSE,README.md,THIRD-PARTY-NOTICES.md $output
-Copy-Item licenses (Join-Path $output "licenses") -Recurse -Force
+Copy-Item licenses $output -Recurse -Force
 $packageCache = if ($env:NUGET_PACKAGES) { $env:NUGET_PACKAGES } else { Join-Path ([Environment]::GetFolderPath("UserProfile")) ".nuget/packages" }
 $config = Get-Content "src/TorrentClassic.App/bin/Release/net10.0-windows/$Runtime/TorrentClassic.runtimeconfig.json" -Raw | ConvertFrom-Json
 foreach ($framework in $config.runtimeOptions.includedFrameworks) {

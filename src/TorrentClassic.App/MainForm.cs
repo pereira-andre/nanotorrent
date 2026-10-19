@@ -32,6 +32,7 @@ public sealed class MainForm : Form
     readonly NotifyIcon tray = new() { Text = "Torrent Classic" };
     readonly ToolStripMenuItem themeMenu = new("Aspeto");
     readonly TaskCompletionSource ready = new();
+    readonly Queue<string> pendingSources = new();
     Palette palette;
     bool refreshing, shutdown, exitRequested, trulyClosed, commandRunning;
     int sortColumn;
@@ -39,6 +40,12 @@ public sealed class MainForm : Form
     string? fileOwner;
     public Task Ready => ready.Task;
     public TorrentService Service => service;
+    public void SelectFirstTorrent()
+    {
+        RefreshRows();
+        torrents.ClearSelection();
+        if (torrents.Rows.Count > 0) torrents.Rows[0].Selected = true;
+    }
 
     public MainForm(TorrentService torrentService)
     {
@@ -46,6 +53,8 @@ public sealed class MainForm : Form
         palette = Palette.For(service.Preferences.Theme);
         Text = "Torrent Classic";
         Font = new Font("Segoe UI", 9);
+        AutoScaleDimensions = new SizeF(96, 96);
+        AutoScaleMode = AutoScaleMode.Dpi;
         ClientSize = new Size(1180, 760);
         MinimumSize = new Size(940, 600);
         StartPosition = FormStartPosition.CenterScreen;
@@ -55,7 +64,7 @@ public sealed class MainForm : Form
         BuildMenus(); BuildToolbar(); BuildCategories(); BuildDetails();
         foreach (var (name, width, numeric) in new (string, int, bool)[] { ("#", 36, true), ("Nome", 285, false), ("Tamanho", 85, true), ("Concluído", 105, false), ("Estado", 150, false), ("Seeds", 60, true), ("Peers", 60, true), ("Vel. download", 100, true), ("Vel. upload", 100, true), ("Tempo restante", 105, true), ("Rácio", 65, true), ("Etiqueta", 95, false) }) torrents.AddColumn(name, width, numeric);
         torrents.CellPainting += PaintProgress;
-        torrents.SelectionChanged += (_, _) => { fileOwner = null; _ = RefreshDetailsAsync(); };
+        torrents.SelectionChanged += (_, _) => { fileOwner = null; _ = RefreshDetailsSafelyAsync(); };
         torrents.CellDoubleClick += (_, e) => { if (e.RowIndex >= 0) OpenSelectedFolder(); };
         torrents.ColumnHeaderMouseClick += (_, e) => { descending = sortColumn == e.ColumnIndex && !descending; sortColumn = e.ColumnIndex; RefreshRows(); };
         torrents.KeyDown += (_, e) => { if (e.KeyCode == Keys.Delete) { e.Handled = true; _ = Run(RemoveSelectedAsync); } };
@@ -205,7 +214,7 @@ public sealed class MainForm : Form
             priorities.Items.Add(Item(label, async () => { if (Selected is { } entry) { var selectedFiles = files.SelectedRows.Cast<DataGridViewRow>().Select(r => r.Tag).OfType<ITorrentManagerFile>().ToArray(); await service.SetPriorityAsync(entry, selectedFiles, priority); await RefreshDetailsAsync(); } }));
         files.ContextMenuStrip = priorities;
         files.CellMouseDown += (_, e) => { if (e.Button == MouseButtons.Right && e.RowIndex >= 0 && !files.Rows[e.RowIndex].Selected) { files.ClearSelection(); files.Rows[e.RowIndex].Selected = true; } };
-        details.SelectedIndexChanged += (_, _) => _ = RefreshDetailsAsync();
+        details.SelectedIndexChanged += (_, _) => _ = RefreshDetailsSafelyAsync();
     }
 
     TorrentEntry? Selected => torrents.SelectedRows.Cast<DataGridViewRow>().OrderBy(r => r.Index).Select(r => r.Tag).OfType<TorrentEntry>().FirstOrDefault();
@@ -285,10 +294,16 @@ public sealed class MainForm : Form
         try
         {
             graph.Add(service.Engine.TotalDownloadRate, service.Engine.TotalUploadRate);
+            if (service.Preferences.Theme == "Sistema" && Palette.For("Sistema").Dark != palette.Dark) ApplyTheme();
             RefreshRows(); await RefreshDetailsAsync();
         }
         catch (Exception e) { service.Log(e.Message); }
         finally { refreshing = false; }
+    }
+    async Task RefreshDetailsSafelyAsync()
+    {
+        try { await RefreshDetailsAsync(); }
+        catch (Exception e) { service.Log(e.Message); }
     }
     async Task RefreshDetailsAsync()
     {
@@ -353,7 +368,11 @@ public sealed class MainForm : Form
         commandRunning = true;
         try { await action(); RefreshRows(); await RefreshDetailsAsync(); }
         catch (Exception e) { ShowError(e); }
-        finally { commandRunning = false; }
+        finally
+        {
+            commandRunning = false;
+            if (pendingSources.Count > 0 && !shutdown) BeginInvoke(() => HandleArguments([]));
+        }
     }
     void ShowError(Exception e) { service.Log(e.ToString()); if (!shutdown) MessageBox.Show(this, e.Message, "Torrent Classic", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
     async Task SelectedOperation(Func<TorrentEntry, Task> action) { foreach (var entry in SelectedEntries) await action(entry); }
@@ -392,7 +411,12 @@ public sealed class MainForm : Form
     }
     void OpenSelectedFolder()
     {
-        if (Selected is { } entry) Process.Start(new ProcessStartInfo("explorer.exe", entry.Manager.SavePath) { UseShellExecute = true });
+        if (Selected is { } entry)
+        {
+            var process = new ProcessStartInfo("explorer.exe") { UseShellExecute = false };
+            process.ArgumentList.Add(entry.Manager.SavePath);
+            Process.Start(process);
+        }
     }
     async Task PreferencesAsync()
     {
@@ -438,7 +462,8 @@ public sealed class MainForm : Form
     public void HandleArguments(string[] args)
     {
         ShowWindow();
-        _ = Run(async () => { foreach (var arg in args) if (!arg.StartsWith("--", StringComparison.Ordinal)) await AddSourceAsync(arg); });
+        foreach (var arg in args) if (!arg.StartsWith("--", StringComparison.Ordinal)) pendingSources.Enqueue(arg);
+        if (!commandRunning) _ = Run(async () => { while (pendingSources.Count > 0 && !shutdown) await AddSourceAsync(pendingSources.Dequeue()); });
     }
     public void RequestExit() { exitRequested = true; Close(); }
     async void ClosingAsync(object? sender, FormClosingEventArgs e)
