@@ -55,9 +55,9 @@ public sealed class ClassicTabs : TabControl
     protected override void WndProc(ref Message m)
     {
         base.WndProc(ref m);
-        if (m.Msg != 0x000F || TabCount == 0) return;
+        if (m.Msg is not (0x000F or 0x0317 or 0x0318) || TabCount == 0) return;
         // Native TabControl ignores BackColor for its unused header and page frame.
-        using var graphics = Graphics.FromHwnd(Handle);
+        using var graphics = m.Msg == 0x000F ? Graphics.FromHwnd(Handle) : Graphics.FromHdc(m.WParam);
         using var brush = new SolidBrush(Colors.Background);
         var last = GetTabRect(TabCount - 1);
         graphics.FillRectangle(brush, last.Right + 1, 0, Math.Max(0, Width - last.Right - 1), last.Bottom + 1);
